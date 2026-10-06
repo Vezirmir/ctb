@@ -1,0 +1,59 @@
+{% extends 'admin/base.html' %}
+{% load i18n unfold %}
+
+{% block title %}{% if subtitle %}{{ subtitle }} | {% endif %}{{ title }} | {{ site_title|default:_('Django site admin') }}{% endblock %}
+
+{% block branding %}
+    {% include "unfold/helpers/site_branding.html" %}
+{% endblock %}
+
+{% block content %}
+<div class="flex flex-col gap-8">
+
+    <div class="flex flex-col lg:flex-row gap-4 lg:items-center justify-between">
+        <div>
+            <h1 class="font-semibold text-2xl text-important tracking-tight">
+                {% blocktranslate with name=request.user.get_short_name|default:request.user.get_username %}Welcome, {{ name }}{% endblocktranslate %}
+            </h1>
+            <p class="text-subtle mt-1">{% translate "Overview of the CTB company database." %}</p>
+        </div>
+        <div class="flex flex-wrap gap-2">
+            {% for link in quick_links %}
+                {% component "unfold/components/button.html" with href=link.href icon=link.icon variant=link.variant %}{{ link.title }}{% endcomponent %}
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {% for kpi in kpis %}
+            {% component "unfold/components/card.html" with href=kpi.href footer=kpi.footer icon=kpi.icon %}
+                <p class="text-subtle text-sm">{{ kpi.title }}</p>
+                <p class="font-semibold text-3xl text-important tracking-tight mt-1">{{ kpi.value }}</p>
+            {% endcomponent %}
+        {% endfor %}
+    </div>
+
+    <div class="grid lg:grid-cols-2 gap-6">
+        {% component "unfold/components/card.html" with title=_("Companies by country") title_icon="public" %}
+            {% component "unfold/components/table.html" with table=by_country card_included=1 striped=1 %}{% endcomponent %}
+        {% endcomponent %}
+        {% component "unfold/components/card.html" with title=_("Companies by industry") title_icon="factory" %}
+            {% component "unfold/components/table.html" with table=by_industry card_included=1 striped=1 %}{% endcomponent %}
+        {% endcomponent %}
+        {% component "unfold/components/card.html" with title=_("Latest replies to CTB") title_icon="mark_email_read" %}
+            {% if recent_replies.rows %}
+                {% component "unfold/components/table.html" with table=recent_replies card_included=1 striped=1 %}{% endcomponent %}
+            {% else %}
+                <p class="text-subtle">{% translate "No replies yet." %}</p>
+            {% endif %}
+        {% endcomponent %}
+        {% component "unfold/components/card.html" with title=_("Recently added companies") title_icon="history" %}
+            {% if recent_companies.rows %}
+                {% component "unfold/components/table.html" with table=recent_companies card_included=1 striped=1 %}{% endcomponent %}
+            {% else %}
+                <p class="text-subtle">{% translate "No companies yet. Start with an import from Excel." %}</p>
+            {% endif %}
+        {% endcomponent %}
+    </div>
+</div>
+{% endblock %}

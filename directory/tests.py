@@ -197,7 +197,7 @@ class AdminTests(TestCase):
             reverse("admin:directory_company_changelist"),
             reverse("admin:directory_company_changelist") + "?replied=yes",
             reverse("admin:directory_company_change", args=[company.pk]),
-            reverse("admin:directory_company_import"),
+            reverse("admin:directory_company_import_excel"),
             reverse("admin:directory_email_changelist"),
             reverse("admin:directory_contact_changelist"),
             reverse("admin:directory_country_changelist"),
@@ -222,7 +222,7 @@ class AdminTests(TestCase):
 
     def test_import_view_upload(self):
         upload = SimpleUploadedFile("2026.zip", sample_zip().getvalue())
-        response = self.client.post(reverse("admin:directory_company_import"), {"file": upload})
+        response = self.client.post(reverse("admin:directory_company_import_excel"), {"file": upload})
         self.assertEqual(response.status_code, 200)
         self.assertEqual(Company.objects.count(), 2)
         self.assertContains(response, "Companies: 2 new")
@@ -230,12 +230,12 @@ class AdminTests(TestCase):
     def test_import_view_single_file_with_chosen_country(self):
         country = Country.objects.create(name_en="Türkiye", name_tr="Türkiye", iso_code="TR")
         upload = SimpleUploadedFile("list.xlsx", xlsx(COMPANY_HEADER, ["Gamma", "gamma.com.tr"]))
-        self.client.post(reverse("admin:directory_company_import"),
+        self.client.post(reverse("admin:directory_company_import_excel"),
                          {"file": upload, "country": country.pk})
         self.assertEqual(Company.objects.get().country, country)
 
     def test_import_view_rejects_bad_files(self):
-        response = self.client.post(reverse("admin:directory_company_import"),
+        response = self.client.post(reverse("admin:directory_company_import_excel"),
                                     {"file": SimpleUploadedFile("x.zip", b"not a zip")})
         self.assertEqual(response.status_code, 200)
         self.assertEqual(Company.objects.count(), 0)

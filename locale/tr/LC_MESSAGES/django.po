@@ -107,8 +107,8 @@ msgstr "Notlar"
 msgid "File"
 msgstr "Dosya"
 
-msgid "A .zip archive with folders <Industry>/<Country>/<file>.xlsx, or a single .xlsx file."
-msgstr "<Sektör>/<Ülke>/<dosya>.xlsx klasörlerini içeren bir .zip arşivi veya tek bir .xlsx dosyası."
+msgid "A .zip archive with folders Industry/Country/file.xlsx, or a single .xlsx file."
+msgstr "Sektör/Ülke/dosya.xlsx klasörlerini içeren bir .zip arşivi veya tek bir .xlsx dosyası."
 
 msgid "Industry"
 msgstr "Sektör"
@@ -433,3 +433,295 @@ msgstr "Sayfayı yenileyin (Ctrl+F5) ve tekrar deneyin. Tekrar olursa bu mesajı
 
 msgid "Back to the site"
 msgstr "Siteye dön"
+
+msgid "B2B company database"
+msgstr "B2B firma veritabanı"
+
+msgid "Dashboard"
+msgstr "Ana panel"
+
+msgid "Database"
+msgstr "Veritabanı"
+
+msgid "E-mail addresses"
+msgstr "E-posta adresleri"
+
+msgid "Events"
+msgstr "Etkinlikler"
+
+msgid "Meetings"
+msgstr "Görüşmeler"
+
+msgid "Reference data"
+msgstr "Referans veriler"
+
+msgid "Countries"
+msgstr "Ülkeler"
+
+msgid "Access"
+msgstr "Erişim"
+
+msgid "Users"
+msgstr "Kullanıcılar"
+
+msgid "Groups"
+msgstr "Gruplar"
+
+msgid "Company"
+msgstr "Firma"
+
+#, python-format
+msgid "%(countries)d countries · %(industries)d industries"
+msgstr "%(countries)d ülke · %(industries)d sektör"
+
+#, python-format
+msgid "%(n)d without company"
+msgstr "%(n)d tanesi firmasız"
+
+msgid "Management, procurement, sales"
+msgstr "Yönetim, satın alma, satış"
+
+msgid "Replied to CTB"
+msgstr "CTB'ye yanıt verenler"
+
+#, python-format
+msgid "%(n)d e-mails need review"
+msgstr "%(n)d e-posta kontrol bekliyor"
+
+msgid "E-mail"
+msgstr "E-posta"
+
+msgid "Last sent"
+msgstr "Son gönderim"
+
+msgid "Added"
+msgstr "Eklendi"
+
+msgid "Add company"
+msgstr "Firma ekle"
+
+msgid "E-mails without company"
+msgstr "Firmasız e-postalar"
+
+msgid "Upload the whole folder as a .zip archive. Inside, each list must be in the folder Industry/Country, for example:"
+msgstr "Klasörün tamamını .zip arşivi olarak yükleyin. İçinde her liste Sektör/Ülke klasöründe olmalıdır, örneğin:"
+
+msgid "The industry and country are taken from the folder names. Columns are recognised by their titles, so their order does not matter."
+msgstr "Sektör ve ülke klasör adlarından alınır. Sütunlar başlıklarından tanınır, sıralarının önemi yoktur."
+
+msgid "Importing the same files again does not create duplicates: companies are matched by name and country, e-mails and contacts are merged."
+msgstr "Aynı dosyaları tekrar içe aktarmak kopya oluşturmaz: firmalar ad ve ülkeye göre eşleştirilir, e-postalar ve kişiler birleştirilir."
+
+msgid "Overview of the CTB company database."
+msgstr "CTB firma veritabanına genel bakış."
+
+msgid "No replies yet."
+msgstr "Henüz yanıt yok."
+
+msgid "No companies yet. Start with an import from Excel."
+msgstr "Henüz firma yok. Excel'den içe aktararak başlayın."
+
+#, python-format
+msgid "Welcome, %(name)s"
+msgstr "Hoş geldiniz, %(name)s"
+
+msgid "Companies by country"
+msgstr "Ülkelere göre firmalar"
+
+msgid "Companies by industry"
+msgstr "Sektörlere göre firmalar"
+
+msgid "Latest replies to CTB"
+msgstr "CTB'ye son yanıtlar"
+
+msgid "Recently added companies"
+msgstr "Son eklenen firmalar"
+
+msgid "How it works"
+msgstr "Nasıl çalışır"
+
+msgid "Replied"
+msgstr "Yanıt verdi"
+
+msgid "Select record"
+msgstr "Kaydı seç"
+
+msgid "Select action"
+msgstr "Eylem seçin"
+
+msgid "No data"
+msgstr "Veri yok"
+
+msgid "Not enough data."
+msgstr "Yeterli veri yok."
+
+msgid "Select action to run"
+msgstr "Çalıştırılacak eylemi seçin"
+
+msgid "Add new item"
+msgstr "Yeni öğe ekle"
+
+msgid "All applications"
+msgstr "Tüm uygulamalar"
+
+msgid "True"
+msgstr "Evet"
+
+msgid "False"
+msgstr "Hayır"
+
+msgid "Apply Filters"
+msgstr "Filtreleri uygula"
+
+msgid "Select"
+msgstr "Seç"
+
+msgid "Recent searches"
+msgstr "Son aramalar"
+
+msgid "Nothing matched your search"
+msgstr "Aramanızla eşleşen sonuç yok"
+
+msgid "Record picture"
+msgstr "Kayıt resmi"
+
+msgid "This item will be deleted."
+msgstr "Bu öğe silinecek."
+
+msgid "Click to cancel"
+msgstr "İptal etmek için tıklayın"
+
+msgid "No results found"
+msgstr "Sonuç bulunamadı"
+
+msgid "This page yielded into no results. Create a new item or reset your filters."
+msgstr "Bu sayfada sonuç yok. Yeni bir kayıt oluşturun veya filtreleri sıfırlayın."
+
+msgid "Reset filters"
+msgstr "Filtreleri sıfırla"
+
+msgid "Image preview"
+msgstr "Resim önizleme"
+
+msgid "Click to download"
+msgstr "İndirmek için tıklayın"
+
+msgid "Go back"
+msgstr "Geri dön"
+
+msgid "Previous"
+msgstr "Önceki"
+
+msgid "Next"
+msgstr "Sonraki"
+
+msgid "Search apps and models..."
+msgstr "Bölümlerde ara..."
+
+msgid "Available shortcuts"
+msgstr "Kullanılabilir kısayollar"
+
+msgid "Global shortcuts"
+msgstr "Genel kısayollar"
+
+msgid "Open command tool"
+msgstr "Komut aracını aç"
+
+msgid "Open shortcuts list"
+msgstr "Kısayol listesini aç"
+
+msgid "Toggle sidebar"
+msgstr "Kenar çubuğunu aç/kapat"
+
+msgid "Toggle dark/light mode"
+msgstr "Koyu/açık modu değiştir"
+
+msgid "Changelist shortcuts"
+msgstr "Liste kısayolları"
+
+msgid "Toggle filter"
+msgstr "Filtreyi aç/kapat"
+
+msgid "Create new record"
+msgstr "Yeni kayıt oluştur"
+
+msgid "Command tool shortcuts"
+msgstr "Komut aracı kısayolları"
+
+msgid "Navigate"
+msgstr "Gezin"
+
+msgid "Open selection"
+msgstr "Seçimi aç"
+
+msgid "Open selection in new tab"
+msgstr "Seçimi yeni sekmede aç"
+
+msgid "General"
+msgstr "Genel"
+
+msgid "Light"
+msgstr "Açık"
+
+msgid "Dark"
+msgstr "Koyu"
+
+msgid "System"
+msgstr "Sistem"
+
+msgid "Return to site"
+msgstr "Siteye dön"
+
+msgid "Dataset not found. No action performed."
+msgstr "Veri kümesi bulunamadı. İşlem yapılmadı."
+
+msgid "Select value"
+msgstr "Değer seçin"
+
+msgid "You can not create nested object without parent"
+msgstr "Üst kayıt olmadan iç içe kayıt oluşturulamaz"
+
+msgid "After you've created a user, you’ll be able to edit more user options."
+msgstr "Kullanıcıyı oluşturduktan sonra daha fazla kullanıcı seçeneğini düzenleyebilirsiniz."
+
+msgid "Run"
+msgstr "Çalıştır"
+
+msgid "Welcome back to"
+msgstr "Tekrar hoş geldiniz:"
+
+msgid "Forgotten your password or username?"
+msgstr "Parolanızı veya kullanıcı adınızı mı unuttunuz?"
+
+msgid "Type to search"
+msgstr "Aramak için yazın"
+
+msgid "You have been successfully logged out from the administration"
+msgstr "Yönetim panelinden başarıyla çıkış yaptınız"
+
+msgid "Date"
+msgstr "Tarih"
+
+msgid "Select currency"
+msgstr "Para birimi seçin"
+
+msgid "Choose file to upload"
+msgstr "Yüklenecek dosyayı seçin"
+
+msgid "Toggle password visibility"
+msgstr "Parolayı göster/gizle"
+
+msgid "From"
+msgstr "Başlangıç"
+
+msgid "To"
+msgstr "Bitiş"
+
+msgid "Date from"
+msgstr "Başlangıç tarihi"
+
+msgid "Date to"
+msgstr "Bitiş tarihi"
+
+msgid "Filters"
+msgstr "Filtreler"

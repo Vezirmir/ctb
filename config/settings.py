@@ -4,6 +4,7 @@ import os
 from pathlib import Path
 
 import dj_database_url
+from django.urls import reverse_lazy
 from django.utils.translation import gettext_lazy as _
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -14,6 +15,8 @@ ALLOWED_HOSTS = [h for h in os.environ.get("DJANGO_ALLOWED_HOSTS", "localhost,12
 CSRF_TRUSTED_ORIGINS = [o for o in os.environ.get("DJANGO_CSRF_TRUSTED_ORIGINS", "").split(",") if o]
 
 INSTALLED_APPS = [
+    "unfold",
+    "unfold.contrib.filters",
     "directory",
     "django.contrib.admin",
     "django.contrib.auth",
@@ -98,6 +101,8 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 # Hosting proxies (PythonAnywhere etc.) terminate HTTPS and pass the scheme in this header.
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 CSRF_FAILURE_VIEW = "directory.views.csrf_failure"
+LOGIN_URL = "admin:login"
+LOGIN_REDIRECT_URL = "admin:index"
 
 # Send warnings (e.g. rejected forms) to the server error log in production too.
 LOGGING = {
@@ -105,4 +110,90 @@ LOGGING = {
     "disable_existing_loggers": False,
     "handlers": {"console": {"class": "logging.StreamHandler"}},
     "root": {"handlers": ["console"], "level": "WARNING"},
+}
+
+
+# --------------------------------------------------------------------------- admin theme
+
+def _changelist(model):
+    return reverse_lazy(f"admin:directory_{model}_changelist")
+
+
+UNFOLD = {
+    "SITE_TITLE": "CTB",
+    "SITE_HEADER": "CTB",
+    "SITE_SUBHEADER": _("B2B company database"),
+    "SITE_SYMBOL": "hub",
+    "SITE_URL": "/admin/",
+    "SHOW_VIEW_ON_SITE": False,
+    "SHOW_LANGUAGES": True,
+    "SHOW_BACK_BUTTON": True,
+    "DASHBOARD_CALLBACK": "directory.dashboard.dashboard_callback",
+    "COLORS": {
+        "primary": {
+            "50": "oklch(97% .014 254.604)",
+            "100": "oklch(93.2% .032 255.585)",
+            "200": "oklch(88.2% .059 254.128)",
+            "300": "oklch(80.9% .105 251.813)",
+            "400": "oklch(70.7% .165 254.624)",
+            "500": "oklch(62.3% .214 259.815)",
+            "600": "oklch(54.6% .245 262.881)",
+            "700": "oklch(48.8% .243 264.376)",
+            "800": "oklch(42.4% .199 265.638)",
+            "900": "oklch(37.9% .146 265.522)",
+            "950": "oklch(28.2% .091 267.935)",
+        },
+    },
+    "SIDEBAR": {
+        "show_search": True,
+        "show_all_applications": False,
+        "navigation": [
+            {
+                "items": [
+                    {"title": _("Dashboard"), "icon": "space_dashboard",
+                     "link": reverse_lazy("admin:index")},
+                ],
+            },
+            {
+                "title": _("Database"),
+                "items": [
+                    {"title": _("Companies"), "icon": "apartment", "link": _changelist("company"),
+                     "badge": "directory.dashboard.company_badge", "badge_variant": "info"},
+                    {"title": _("E-mail addresses"), "icon": "alternate_email",
+                     "link": _changelist("email")},
+                    {"title": _("Contact persons"), "icon": "contacts", "link": _changelist("contact")},
+                    {"title": _("Import from Excel"), "icon": "upload_file",
+                     "link": reverse_lazy("admin:directory_company_import_excel")},
+                ],
+            },
+            {
+                "title": _("Events"),
+                "items": [
+                    {"title": _("Events"), "icon": "event", "link": _changelist("event")},
+                    {"title": _("Meetings"), "icon": "handshake", "link": _changelist("meeting")},
+                ],
+            },
+            {
+                "title": _("Reference data"),
+                "collapsible": True,
+                "items": [
+                    {"title": _("Countries"), "icon": "public", "link": _changelist("country")},
+                    {"title": _("Industries"), "icon": "factory", "link": _changelist("industry")},
+                    {"title": _("Tags"), "icon": "sell", "link": _changelist("tag")},
+                ],
+            },
+            {
+                "title": _("Access"),
+                "collapsible": True,
+                "items": [
+                    {"title": _("Users"), "icon": "person",
+                     "link": reverse_lazy("admin:auth_user_changelist"),
+                     "permission": lambda request: request.user.is_superuser},
+                    {"title": _("Groups"), "icon": "group",
+                     "link": reverse_lazy("admin:auth_group_changelist"),
+                     "permission": lambda request: request.user.is_superuser},
+                ],
+            },
+        ],
+    },
 }

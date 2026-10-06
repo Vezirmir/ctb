@@ -5,6 +5,7 @@ from django.contrib import admin, messages
 from django.contrib.auth.admin import GroupAdmin as BaseGroupAdmin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.auth.models import Group, User
+from django.core.exceptions import PermissionDenied
 from django.db import models
 from django.db.models import Count, Exists, Max, OuterRef, Q, Subquery
 from django.shortcuts import get_object_or_404, redirect
@@ -168,8 +169,13 @@ class RepliedFilter(admin.SimpleListFilter):
         return queryset
 
 
+class ExportPermissionMixin:
+    def has_export_permission(self, request):
+        return request.user.has_perm("directory.export_data")
+
+
 @admin.register(Company)
-class CompanyAdmin(ModelAdmin):
+class CompanyAdmin(ExportPermissionMixin, ModelAdmin):
     list_display = ["company", "industry_list", "website_links", "email_count", "contact_count",
                     "replied"]
     list_display_links = ["company"]
@@ -250,7 +256,7 @@ class CompanyAdmin(ModelAdmin):
     def replied(self, obj):
         return ("yes", _("Replied")) if obj._replied else None
 
-    @admin.action(description=_("Export selected companies to Excel"))
+    @admin.action(description=_("Export selected companies to Excel"), permissions=["export"])
     def export_xlsx(self, request, queryset):
         return companies_to_xlsx_response(queryset)
 
@@ -325,7 +331,7 @@ class CompanyAdmin(ModelAdmin):
 
 
 @admin.register(Email)
-class EmailAdmin(ModelAdmin):
+class EmailAdmin(ExportPermissionMixin, ModelAdmin):
     list_display = ["email", "company", "source_label", "person_name", "sent_count", "last_sent_on",
                     "replied", "needs_review"]
     list_filter = [
@@ -353,7 +359,7 @@ class EmailAdmin(ModelAdmin):
     def source_label(self, obj):
         return obj.source, obj.get_source_display()
 
-    @admin.action(description=_("Export selected e-mails to Excel"))
+    @admin.action(description=_("Export selected e-mails to Excel"), permissions=["export"])
     def export_xlsx(self, request, queryset):
         return emails_to_xlsx_response(queryset)
 
@@ -468,6 +474,7 @@ class EventAdmin(ModelAdmin):
             "schedule_url": reverse("admin:directory_event_schedule", args=[event.pk]),
             "invitations_url": reverse("admin:directory_participation_changelist")
             + f"?event__id__exact={event.pk}",
+            "can_change": self.has_change_permission(request, event),
         }
 
     @action(description=_("Invitations"), url_path="invitations", icon="forward_to_inbox")
@@ -494,12 +501,14 @@ class EventAdmin(ModelAdmin):
         return TemplateResponse(request, "admin/directory/event/matches.html", context)
 
     @action(description=_("Schedule"), url_path="schedule", icon="calendar_month",
-            permissions=["change"])
+            permissions=["view"])
     def schedule(self, request, object_id):
         event = get_object_or_404(Event, pk=object_id)
         if request.GET.get("format") == "xlsx":
             return schedule_to_xlsx_response(event)
         if request.method == "POST":
+            if not self.has_change_permission(request, event):
+                raise PermissionDenied
             if "clear" in request.POST:
                 cleared = clear_schedule(event)
                 messages.info(request, _("Times removed from %(n)d meetings.") % {"n": cleared})
@@ -525,6 +534,7 @@ class EventAdmin(ModelAdmin):
             "unscheduled": unscheduled,
             "slot_count": len(event.slots()),
             "status_labels": STATUS_LABELS,
+            "can_change": self.has_change_permission(request, event),
         })
         return TemplateResponse(request, "admin/directory/event/schedule.html", context)
 
@@ -797,7 +807,7 @@ class ParticipationAdmin(ModelAdmin):
         }
         return TemplateResponse(request, "admin/directory/participation/send_invitations.html", context)
 
-    @admin.action(description=_("Invitation e-mail sent to selected companies"))
+    @admin.action(description=_("Invitation e-mail sent to selected companies"), permissions=["change"])
     def log_invitation_emails(self, request, queryset):
         for participation in queryset.select_related("company"):
             log_activity(participation, Activity.Kind.EMAIL, request.user,
@@ -810,15 +820,15 @@ class ParticipationAdmin(ModelAdmin):
         updated = queryset.update(status=status)
         messages.success(request, _("Updated: %(n)d.") % {"n": updated})
 
-    @admin.action(description=_("Mark as confirmed"))
+    @admin.action(description=_("Mark as confirmed"), permissions=["change"])
     def mark_confirmed(self, request, queryset):
         self._set_status(request, queryset, Participation.Status.CONFIRMED)
 
-    @admin.action(description=_("Mark as declined"))
+    @admin.action(description=_("Mark as declined"), permissions=["change"])
     def mark_declined(self, request, queryset):
         self._set_status(request, queryset, Participation.Status.DECLINED)
 
-    @admin.action(description=_("Mark as attended"))
+    @admin.action(description=_("Mark as attended"), permissions=["change"])
     def mark_attended(self, request, queryset):
         self._set_status(request, queryset, Participation.Status.ATTENDED)
 
@@ -837,11 +847,11 @@ class MeetingAdmin(ModelAdmin):
     def status_label(self, obj):
         return obj.status, obj.get_status_display()
 
-    @admin.action(description=_("Mark as held"))
+    @admin.action(description=_("Mark as held"), permissions=["change"])
     def mark_held(self, request, queryset):
         queryset.update(status=Meeting.Status.HELD)
 
-    @admin.action(description=_("Mark as cancelled"))
+    @admin.action(description=_("Mark as cancelled"), permissions=["change"])
     def mark_cancelled(self, request, queryset):
         queryset.update(status=Meeting.Status.CANCELLED)
 
@@ -904,7 +914,8 @@ class EmailTemplateAdmin(ModelAdmin):
         }
         return TemplateResponse(request, "admin/directory/emailtemplate/preview.html", context)
 
-    @action(description=_("Send a test e-mail to me"), url_path="send-test", icon="send")
+    @action(description=_("Send a test e-mail to me"), url_path="send-test", icon="send",
+            permissions=["change"])
     def send_test(self, request, object_id):
         template = get_object_or_404(EmailTemplate, pk=object_id)
         sample = self._sample()

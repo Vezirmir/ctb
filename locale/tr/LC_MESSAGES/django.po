@@ -1360,3 +1360,6 @@ msgid "Send to %(n)s company"
 msgid_plural "Send to %(n)s companies"
 msgstr[0] "%(n)s firmaya gönder"
 msgstr[1] "%(n)s firmaya gönder"
+
+msgid "Can export companies and e-mails to Excel"
+msgstr "Firmaları ve e-postaları Excel'e aktarabilir"

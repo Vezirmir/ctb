@@ -241,7 +241,8 @@ UNFOLD = {
                      "link": _changelist("email")},
                     {"title": _("Contact persons"), "icon": "contacts", "link": _changelist("contact")},
                     {"title": _("Import from Excel"), "icon": "upload_file",
-                     "link": reverse_lazy("admin:directory_company_import_excel")},
+                     "link": reverse_lazy("admin:directory_company_import_excel"),
+                     "permission": lambda request: request.user.has_perm("directory.add_company")},
                 ],
             },
             {

@@ -115,6 +115,7 @@ class Company(models.Model):
         ordering = ["name"]
         verbose_name = _("company")
         verbose_name_plural = _("companies")
+        permissions = [("export_data", _("Can export companies and e-mails to Excel"))]
         indexes = [models.Index(fields=["name"])]
 
     def __str__(self):

@@ -727,3 +727,105 @@ class InvitationMailTests(TestCase):
         self.assertEqual(self.client.get(url).status_code, 200)
         self.client.logout()
         self.assertEqual(self.client.get(url).status_code, 302)
+
+
+class ReadOnlyUserTests(TestCase):
+    def setUp(self):
+        translation.activate("en")
+        from django.contrib.auth.models import Group
+        from .models import EmailTemplate, Event, Participation
+        from .permissions import EDITOR_GROUP, READ_ONLY_GROUP
+        Importer().import_named_files(read_zip(sample_zip()))
+        self.company = Company.objects.get(name="ACME MOTORS")
+        self.event = Event.objects.create(name="Bursa 2026", start_date=date(2026, 11, 3))
+        self.p = Participation.objects.create(event=self.event, company=self.company)
+        self.template = EmailTemplate.objects.create(name="T", subject="S", body="B {company}")
+        User = get_user_model()
+        self.viewer = User.objects.create_user("viewer", "v@x.com", "pw")
+        self.viewer.groups.add(Group.objects.get(name=READ_ONLY_GROUP))
+        self.editor = User.objects.create_user("editor", "e@x.com", "pw")
+        self.editor.groups.add(Group.objects.get(name=EDITOR_GROUP))
+        self.client.force_login(self.viewer)
+
+    def test_group_membership_grants_admin_access(self):
+        self.viewer.refresh_from_db()
+        self.editor.refresh_from_db()
+        self.assertTrue(self.viewer.is_staff and self.editor.is_staff)
+        self.assertFalse(self.viewer.is_superuser)
+
+    def test_viewer_can_open_everything(self):
+        urls = [
+            reverse("admin:index"),
+            reverse("admin:directory_company_changelist"),
+            reverse("admin:directory_company_change", args=[self.company.pk]),
+            reverse("admin:directory_email_changelist"),
+            reverse("admin:directory_contact_changelist"),
+            reverse("admin:directory_event_changelist"),
+            reverse("admin:directory_event_change", args=[self.event.pk]),
+            reverse("admin:directory_event_schedule", args=[self.event.pk]),
+            reverse("admin:directory_participation_changelist"),
+            reverse("admin:directory_participation_change", args=[self.p.pk]),
+            reverse("admin:directory_meeting_changelist"),
+            reverse("admin:directory_emailtemplate_changelist"),
+            reverse("admin:directory_emailtemplate_preview", args=[self.template.pk]),
+            reverse("admin:directory_signature"),
+            reverse("admin:directory_country_changelist"),
+        ]
+        for language in ("en", "tr"):
+            self.client.cookies["django_language"] = language
+            for url in urls:
+                self.assertEqual(self.client.get(url).status_code, 200, url)
+
+    @staticmethod
+    def _actions(response):
+        form = response.context["action_form"]
+        return [name for name, _ in form.fields["action"].choices if name] if form else []
+
+    def test_viewer_sees_no_editing_controls(self):
+        dashboard = self.client.get(reverse("admin:index")).content.decode()
+        self.assertNotIn(reverse("admin:directory_company_import_excel"), dashboard)
+        self.assertNotIn(reverse("admin:directory_company_add"), dashboard)
+        companies = self.client.get(reverse("admin:directory_company_changelist"))
+        self.assertEqual(self._actions(companies), [])
+        invitations = self.client.get(reverse("admin:directory_participation_changelist"))
+        self.assertNotContains(invitations, "log-call")
+        self.assertEqual(self._actions(invitations), [])
+        schedule = self.client.get(reverse("admin:directory_event_schedule", args=[self.event.pk]))
+        self.assertNotContains(schedule, 'name="clear"')
+        self.assertNotContains(schedule, reverse("admin:directory_event_matches", args=[self.event.pk]))
+
+    def test_viewer_cannot_change_anything(self):
+        forbidden = [
+            ("get", reverse("admin:directory_company_import_excel")),
+            ("get", reverse("admin:directory_event_matches", args=[self.event.pk])),
+            ("get", reverse("admin:directory_participation_row_call", args=[self.p.pk])),
+            ("get", reverse("admin:directory_emailtemplate_send_test", args=[self.template.pk])),
+            ("get", reverse("admin:directory_mailsettings_change", args=[1])),
+            ("get", reverse("admin:directory_company_add")),
+            ("post", reverse("admin:directory_company_change", args=[self.company.pk])),
+            ("post", reverse("admin:directory_event_schedule", args=[self.event.pk])),
+            ("post", reverse("admin:directory_company_delete", args=[self.company.pk])),
+        ]
+        for method, url in forbidden:
+            response = getattr(self.client, method)(url, {"name": "Hacked"} if method == "post" else None)
+            self.assertIn(response.status_code, (302, 403), url)
+            if response.status_code == 302:
+                self.assertNotIn("change", response.get("Location", ""), url)
+        self.company.refresh_from_db()
+        self.assertEqual(self.company.name, "ACME MOTORS")
+        export = self.client.post(reverse("admin:directory_company_changelist"),
+                                  {"action": "export_xlsx", "_selected_action": [self.company.pk]})
+        self.assertNotEqual(export.get("Content-Type"), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        self.client.post(reverse("admin:directory_participation_changelist"),
+                                  {"action": "mark_declined", "_selected_action": [self.p.pk]})
+        self.p.refresh_from_db()
+        self.assertNotEqual(self.p.status, "declined")
+
+    def test_editor_can_export_and_log(self):
+        self.client.force_login(self.editor)
+        export = self.client.post(reverse("admin:directory_company_changelist"),
+                                  {"action": "export_xlsx", "_selected_action": [self.company.pk]})
+        self.assertEqual(export["Content-Type"], "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        self.assertEqual(self.client.get(
+            reverse("admin:directory_participation_row_call", args=[self.p.pk])).status_code, 200)
+        self.assertEqual(self.client.get(reverse("admin:directory_mailsettings_change", args=[1])).status_code, 403)

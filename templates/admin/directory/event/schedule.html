@@ -19,8 +19,10 @@
     </p>
     <form method="post" class="flex flex-wrap gap-2">
         {% csrf_token %}
-        {% component "unfold/components/button.html" with submit=1 icon="auto_schedule" %}{% translate "Build schedule" %}{% endcomponent %}
-        {% component "unfold/components/button.html" with submit=1 name="clear" value="1" icon="event_busy" variant="default" %}{% translate "Clear times" %}{% endcomponent %}
+        {% if can_change %}
+            {% component "unfold/components/button.html" with submit=1 icon="auto_schedule" %}{% translate "Build schedule" %}{% endcomponent %}
+            {% component "unfold/components/button.html" with submit=1 name="clear" value="1" icon="event_busy" variant="default" %}{% translate "Clear times" %}{% endcomponent %}
+        {% endif %}
         {% component "unfold/components/button.html" with href="?format=xlsx" icon="download" variant="default" %}{% translate "Export to Excel" %}{% endcomponent %}
     </form>
 </div>

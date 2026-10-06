@@ -88,12 +88,15 @@ def dashboard_callback(request, context):
         ],
     }
     participations = reverse("admin:directory_participation_changelist")
+    can_log = request.user.has_perm("directory.change_participation")
+    follow_up_view = ("admin:directory_participation_row_call" if can_log
+                      else "admin:directory_participation_change")
     today = timezone.localdate()
     context["follow_ups"] = {
         "headers": [_("Company"), _("Event"), _("Status"), _("Follow up on")],
         "rows": [
             [
-                _link(reverse("admin:directory_participation_row_call", args=[p.pk]), p.company.name),
+                _link(reverse(follow_up_view, args=[p.pk]), p.company.name),
                 p.event.name,
                 p.get_status_display(),
                 format_html('<span class="{}">{}</span>',
@@ -115,12 +118,14 @@ def dashboard_callback(request, context):
             for c in Company.objects.select_related("country").order_by("-created_at", "-pk")[:8]
         ],
     }
-    context["quick_links"] = [
-        {"title": _("Import from Excel"), "icon": "upload_file",
-         "href": reverse("admin:directory_company_import_excel"), "variant": "primary"},
-        {"title": _("Add company"), "icon": "add_business",
-         "href": reverse("admin:directory_company_add"), "variant": "default"},
-        {"title": _("E-mails without company"), "icon": "unknown_document",
-         "href": f"{emails}?company__isempty=1", "variant": "default"},
-    ]
+    context["quick_links"] = [link for link, allowed in [
+        ({"title": _("Import from Excel"), "icon": "upload_file",
+          "href": reverse("admin:directory_company_import_excel"), "variant": "primary"},
+         request.user.has_perm("directory.add_company")),
+        ({"title": _("Add company"), "icon": "add_business",
+          "href": reverse("admin:directory_company_add"), "variant": "default"},
+         request.user.has_perm("directory.add_company")),
+        ({"title": _("E-mails without company"), "icon": "unknown_document",
+          "href": f"{emails}?company__isempty=1", "variant": "default"}, True),
+    ] if allowed]
     return context

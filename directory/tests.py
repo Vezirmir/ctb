@@ -471,3 +471,32 @@ class ImportTemplateTests(TestCase):
             self.assertEqual(company.contacts.get(full_name="Ayşe Kaya").position, "Satış")
             # The help and list sheets are not imported as companies.
             self.assertEqual(Company.objects.count(), 1)
+
+
+class EmailExportTests(TestCase):
+    def setUp(self):
+        translation.activate("en")
+        self.client.force_login(get_user_model().objects.create_superuser("admin", "a@example.com", "pw"))
+        Importer().import_named_files(read_zip(sample_zip()))
+
+    def test_export_selected(self):
+        ids = list(Email.objects.filter(company__name="ACME MOTORS").values_list("pk", flat=True))
+        response = self.client.post(reverse("admin:directory_email_changelist"),
+                                    {"action": "export_xlsx", "_selected_action": ids})
+        self.assertEqual(response.status_code, 200)
+        ws = load_workbook(io.BytesIO(response.content)).active
+        self.assertEqual(ws["A1"].value, "E-mail")
+        self.assertEqual(ws.max_row, len(ids) + 1)
+        rows = {r[0]: r for r in ws.iter_rows(min_row=2, values_only=True)}
+        sales = rows["sales@acme.by"]
+        self.assertEqual((sales[1], sales[2], sales[3]), ("ACME MOTORS", "Belarus", "Automotive"))
+        self.assertEqual((sales[8], sales[10]), (3, "Yes"))
+        self.assertEqual(sales[9].date(), date(2024, 10, 16))
+
+    def test_export_all_matching_filter(self):
+        url = reverse("admin:directory_email_changelist") + "?company__isempty=1"
+        response = self.client.post(url, {"action": "export_xlsx", "select_across": "1",
+                                          "_selected_action": [Email.objects.first().pk]})
+        ws = load_workbook(io.BytesIO(response.content)).active
+        self.assertEqual([r[0] for r in ws.iter_rows(min_row=2, values_only=True)], ["info@other.kz"])
+        self.assertEqual(ws["H2"].value, "Другие страны")

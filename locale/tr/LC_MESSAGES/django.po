@@ -1004,3 +1004,24 @@ msgstr "Virgülle ayırarak."
 
 msgid "Excel template"
 msgstr "Excel şablonu"
+
+msgid "Export selected e-mails to Excel"
+msgstr "Seçili e-postaları Excel'e aktar"
+
+msgid "Source"
+msgstr "Kaynak"
+
+msgid "Person"
+msgstr "Kişi"
+
+msgid "Department / role"
+msgstr "Departman / görev"
+
+msgid "Group"
+msgstr "Grup"
+
+msgid "E-mails sent"
+msgstr "Gönderilen e-postalar"
+
+msgid "Needs review"
+msgstr "Kontrol gerekli"

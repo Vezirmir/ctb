@@ -187,3 +187,44 @@ def schedule_to_xlsx_response(event):
     response["Content-Disposition"] = f'attachment; filename="schedule_{event.pk}.xlsx"'
     wb.save(response)
     return response
+
+
+def emails_to_xlsx_response(queryset):
+    queryset = queryset.select_related("company__country").prefetch_related("company__industries")
+    wb = Workbook()
+    ws = wb.active
+    ws.title = _("E-mails")[:31]
+    columns = [
+        (_("E-mail"), 34), (_("Company"), 32), (_("Country"), 14), (_("Industries"), 22),
+        (_("Source"), 16), (_("Person"), 26), (_("Department / role"), 32), (_("Group"), 24),
+        (_("E-mails sent"), 12), (_("Last sent"), 12), (_("Replied"), 10),
+        (_("Needs review"), 12), (_("Notes"), 36),
+    ]
+    ws.append([str(title) for title, _width in columns])
+    for index, (_title, width) in enumerate(columns, start=1):
+        cell = ws.cell(row=1, column=index)
+        cell.font = Font(bold=True)
+        cell.fill = HEADER_FILL
+        ws.column_dimensions[get_column_letter(index)].width = width
+    yes, no = _("Yes"), _("No")
+    for e in queryset:
+        company = e.company
+        ws.append([
+            e.email,
+            company.name if company else "",
+            str(company.country) if company and company.country else "",
+            ", ".join(str(i) for i in company.industries.all()) if company else "",
+            e.get_source_display(),
+            e.person_name,
+            e.description,
+            e.group,
+            e.sent_count,
+            e.last_sent_on,
+            yes if e.replied else no,
+            yes if e.needs_review else no,
+            e.notes,
+        ])
+        ws.cell(row=ws.max_row, column=10).number_format = "DD.MM.YYYY"
+    ws.freeze_panes = "A2"
+    ws.auto_filter.ref = ws.dimensions
+    return _xlsx_response(wb, f"emails_{timezone.localdate():%Y-%m-%d}.xlsx")

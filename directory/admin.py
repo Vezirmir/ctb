@@ -20,7 +20,8 @@ from unfold.forms import AdminPasswordChangeForm, UserChangeForm, UserCreationFo
 from unfold.widgets import UnfoldAdminSingleTimeWidget, UnfoldAdminTextareaWidget
 
 from .exports import (
-    companies_to_xlsx_response, import_template_response, schedule_to_xlsx_response,
+    companies_to_xlsx_response, emails_to_xlsx_response, import_template_response,
+    schedule_to_xlsx_response,
 )
 from .forms import AddToEventForm, ImportForm
 from .importer import Importer, read_zip
@@ -322,6 +323,7 @@ class EmailAdmin(ModelAdmin):
     autocomplete_fields = ["company"]
     list_select_related = ["company"]
     date_hierarchy = "last_sent_on"
+    actions = ["export_xlsx"]
     fieldsets = [
         (None, {"fields": [("email", "company"), ("source", "person_name"), ("description", "group")]}),
         (_("CTB correspondence"), {"fields": [("sent_count", "last_sent_on"),
@@ -332,6 +334,10 @@ class EmailAdmin(ModelAdmin):
     @display(description=_("source"), label=SOURCE_LABELS, ordering="source")
     def source_label(self, obj):
         return obj.source, obj.get_source_display()
+
+    @admin.action(description=_("Export selected e-mails to Excel"))
+    def export_xlsx(self, request, queryset):
+        return emails_to_xlsx_response(queryset)
 
 
 @admin.register(Contact)

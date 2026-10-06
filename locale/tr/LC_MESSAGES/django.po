@@ -947,3 +947,60 @@ msgstr "Eşleşme"
 
 msgid "Use the login and password you were given."
 msgstr "Size verilen kullanıcı adı ve parolayı kullanın."
+
+msgid "How to fill in"
+msgstr "Nasıl doldurulur"
+
+msgid "How to fill in the template"
+msgstr "Şablon nasıl doldurulur"
+
+msgid "1. Fill in one company per row on the first sheet. Only “Company name” is required."
+msgstr "1. İlk sayfada her satıra bir firma yazın. Yalnızca “Firma adı” zorunludur."
+
+msgid "2. Several websites, phones or e-mails: one per line (Alt+Enter) or separated by commas."
+msgstr "2. Birden fazla web sitesi, telefon veya e-posta: her satıra bir tane (Alt+Enter) veya virgülle ayırarak."
+
+msgid "3. Contact persons: one per line, as “Full name / Position / e-mail / phone”."
+msgstr "3. İrtibat kişileri: her satıra bir kişi, “Ad soyad / Pozisyon / e-posta / telefon” biçiminde."
+
+msgid "4. Country and industries can be picked from the list or typed in."
+msgstr "4. Ülke ve sektörler listeden seçilebilir veya elle yazılabilir."
+
+msgid "5. Save the file and upload it on the “Import from Excel” page. Existing companies are updated, not duplicated."
+msgstr "5. Dosyayı kaydedin ve “Excel'den içe aktar” sayfasından yükleyin. Mevcut firmalar güncellenir, kopyalanmaz."
+
+msgid "Example:"
+msgstr "Örnek:"
+
+msgid "Download the template, copy your companies into it (one company per row) and upload it here."
+msgstr "Şablonu indirin, firmalarınızı içine kopyalayın (her satıra bir firma) ve buraya yükleyin."
+
+msgid "Download Excel template"
+msgstr "Excel şablonunu indir"
+
+msgid "Company name"
+msgstr "Firma adı"
+
+msgid "Required."
+msgstr "Zorunlu."
+
+msgid "Pick from the list or type a new country."
+msgstr "Listeden seçin veya yeni bir ülke yazın."
+
+msgid "Pick from the list; several industries can be separated by commas."
+msgstr "Listeden seçin; birden fazla sektör virgülle ayrılabilir."
+
+msgid "One per line or separated by commas."
+msgstr "Her satıra bir tane veya virgülle ayırarak."
+
+msgid "One person per line: Full name / Position / e-mail / phone."
+msgstr "Her satıra bir kişi: Ad soyad / Pozisyon / e-posta / telefon."
+
+msgid "Address"
+msgstr "Adres"
+
+msgid "Separated by commas."
+msgstr "Virgülle ayırarak."
+
+msgid "Excel template"
+msgstr "Excel şablonu"

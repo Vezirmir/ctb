@@ -33,6 +33,16 @@
         {% endif %}
     </div>
 
+    <div class="flex flex-col gap-6">
+    {% component "unfold/components/card.html" with title=_("Excel template") title_icon="table_view" %}
+        <div class="flex flex-col gap-4 text-sm">
+            <p>{% translate "Download the template, copy your companies into it (one company per row) and upload it here." %}</p>
+            <div>
+                {% component "unfold/components/button.html" with href=template_url icon="download" variant="default" %}{% translate "Download Excel template" %}{% endcomponent %}
+            </div>
+        </div>
+    {% endcomponent %}
+
     {% component "unfold/components/card.html" with title=_("How it works") title_icon="help" %}
         <div class="flex flex-col gap-2 text-sm">
             <p>{% translate "Upload the whole folder as a .zip archive. Inside, each list must be in the folder Industry/Country, for example:" %}</p>
@@ -41,5 +51,6 @@
             <p>{% translate "Importing the same files again does not create duplicates: companies are matched by name and country, e-mails and contacts are merged." %}</p>
         </div>
     {% endcomponent %}
+    </div>
 </div>
 {% endblock %}

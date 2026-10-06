@@ -406,3 +406,68 @@ class MatchmakingTests(TestCase):
         p = self.event.participations.get(company=new)
         self.assertEqual((p.role, p.status), ("seller", "invited"))
         self.assertEqual(self.event.participations.get(company=self.buyer1.company).role, "buyer")
+
+
+class ImportTemplateTests(TestCase):
+    def setUp(self):
+        translation.activate("en")
+        user = get_user_model().objects.create_superuser("admin", "a@example.com", "pw")
+        self.client.force_login(user)
+        Country.objects.create(name_en="Türkiye", name_tr="Türkiye", iso_code="TR")
+        Industry.objects.create(name_en="Automotive", name_tr="Otomotiv")
+
+    def download(self, language):
+        self.client.cookies["django_language"] = language
+        response = self.client.get(reverse("admin:directory_company_import_template"))
+        self.assertEqual(response.status_code, 200)
+        return load_workbook(io.BytesIO(response.content))
+
+    def fill_and_import(self, wb):
+        ws = wb.worksheets[0]
+        ws.append([
+            "Gamma Otomotiv A.Ş.", "Türkiye", "Otomotiv, Yeni Sektör", "Bursa",
+            "www.gamma.com.tr, gamma.com", "+90 224 111 11 11", "info@gamma.com.tr, sales@gamma.com.tr",
+            "Ali Yılmaz / Satın alma müdürü / ali@gamma.com.tr / +90 532 111 11 11\nAyşe Kaya, Satış",
+            "Organize Sanayi", "VIP, 2026", "Parça üreticisi", "Fuarda tanıştık",
+        ])
+        buffer = io.BytesIO()
+        wb.save(buffer)
+        upload = SimpleUploadedFile("ctb_import_template.xlsx", buffer.getvalue())
+        return self.client.post(reverse("admin:directory_company_import_excel"), {"file": upload})
+
+    def test_template_has_headers_lists_and_help(self):
+        wb = self.download("en")
+        ws = wb.worksheets[0]
+        self.assertEqual(ws["A1"].value, "Company name")
+        self.assertEqual(ws.freeze_panes, "A2")
+        self.assertEqual(len(ws.data_validations.dataValidation), 2)
+        self.assertEqual(wb["lists"].sheet_state, "hidden")
+        self.assertEqual(len(wb.sheetnames), 3)
+        self.assertEqual(self.download("tr").worksheets[0]["A1"].value, "Firma adı")
+
+    def test_import_page_links_to_template(self):
+        response = self.client.get(reverse("admin:directory_company_import_excel"))
+        self.assertContains(response, reverse("admin:directory_company_import_template"))
+
+    def test_filled_template_imports_in_both_languages(self):
+        for language in ("en", "tr"):
+            Company.objects.all().delete()
+            response = self.fill_and_import(self.download(language))
+            self.assertEqual(response.status_code, 200)
+            company = Company.objects.get()
+            self.assertEqual(company.country.iso_code, "TR")
+            self.assertEqual(sorted(i.name_en for i in company.industries.all()),
+                             ["Automotive", "Yeni Sektör"])
+            self.assertEqual(company.city, "Bursa")
+            self.assertEqual(company.website_list, ["www.gamma.com.tr", "gamma.com"])
+            self.assertEqual(company.address, "Organize Sanayi")
+            self.assertEqual(company.notes, "Fuarda tanıştık")
+            self.assertEqual(sorted(t.name for t in company.tags.all()), ["2026", "VIP"])
+            self.assertEqual(sorted(company.emails.values_list("email", flat=True)),
+                             ["ali@gamma.com.tr", "info@gamma.com.tr", "sales@gamma.com.tr"])
+            ali = company.contacts.get(full_name="Ali Yılmaz")
+            self.assertEqual((ali.position, ali.email, ali.phone),
+                             ("Satın alma müdürü", "ali@gamma.com.tr", "+90 532 111 11 11"))
+            self.assertEqual(company.contacts.get(full_name="Ayşe Kaya").position, "Satış")
+            # The help and list sheets are not imported as companies.
+            self.assertEqual(Company.objects.count(), 1)

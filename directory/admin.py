@@ -9,7 +9,7 @@ from django.db import models
 from django.db.models import Count, Exists, OuterRef
 from django.shortcuts import get_object_or_404, redirect
 from django.template.response import TemplateResponse
-from django.urls import reverse
+from django.urls import path, reverse
 from django.utils import timezone
 from django.utils.html import format_html, format_html_join
 from django.utils.translation import gettext_lazy as _
@@ -19,7 +19,9 @@ from unfold.decorators import action, display
 from unfold.forms import AdminPasswordChangeForm, UserChangeForm, UserCreationForm
 from unfold.widgets import UnfoldAdminSingleTimeWidget, UnfoldAdminTextareaWidget
 
-from .exports import companies_to_xlsx_response, schedule_to_xlsx_response
+from .exports import (
+    companies_to_xlsx_response, import_template_response, schedule_to_xlsx_response,
+)
 from .forms import AddToEventForm, ImportForm
 from .importer import Importer, read_zip
 from .matchmaking import (
@@ -260,6 +262,16 @@ class CompanyAdmin(ModelAdmin):
         }
         return TemplateResponse(request, "admin/directory/company/add_to_event.html", context)
 
+    def get_urls(self):
+        return [
+            path("import-template/", self.admin_site.admin_view(self.import_template_view),
+                 name="directory_company_import_template"),
+            *super().get_urls(),
+        ]
+
+    def import_template_view(self, request):
+        return import_template_response()
+
     @action(description=_("Import from Excel"), url_path="import-excel", icon="upload_file",
             permissions=["add"])
     def import_excel(self, request):
@@ -288,6 +300,7 @@ class CompanyAdmin(ModelAdmin):
             "form": form,
             "report": report,
             "index_url": reverse("admin:index"),
+            "template_url": reverse("admin:directory_company_import_template"),
         }
         return TemplateResponse(request, "admin/directory/company/import.html", context)
 

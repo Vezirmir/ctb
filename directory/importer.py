@@ -17,14 +17,17 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path, PurePosixPath
 
+from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import validate_email
 from django.db import transaction
+from django.utils import translation
 from django.utils.translation import gettext as _
+from django.utils.translation import gettext_lazy as _lazy
 from openpyxl import load_workbook
 
 from . import reference
-from .models import Company, Contact, Country, Email, Industry, normalize_name
+from .models import Company, Contact, Country, Email, Industry, Tag, normalize_name
 
 EXCEL_SUFFIXES = {".xlsx", ".xlsm"}
 MAX_MEMBER_SIZE = 50 * 1024 * 1024
@@ -55,6 +58,38 @@ UNASSIGNED_COLUMNS = {
     "correspondence": ["что есть в почте"],
     "notes": ["комментарий", "comment"],
 }
+
+# Columns of the downloadable import template (and of the Excel export), in order:
+# (field, header, column width, hint shown as a cell comment).
+TEMPLATE_COLUMNS = [
+    ("name", _lazy("Company name"), 34, _lazy("Required.")),
+    ("country", _lazy("Country"), 16, _lazy("Pick from the list or type a new country.")),
+    ("industries", _lazy("Industries"), 22,
+     _lazy("Pick from the list; several industries can be separated by commas.")),
+    ("city", _lazy("City"), 16, ""),
+    ("websites", _lazy("Websites"), 26, _lazy("One per line or separated by commas.")),
+    ("phones", _lazy("Phones"), 22, _lazy("One per line or separated by commas.")),
+    ("emails", _lazy("E-mails"), 30, _lazy("One per line or separated by commas.")),
+    ("contacts", _lazy("Contact persons"), 44,
+     _lazy("One person per line: Full name / Position / e-mail / phone.")),
+    ("address", _lazy("Address"), 30, ""),
+    ("tags", _lazy("Tags"), 18, _lazy("Separated by commas.")),
+    ("description", _lazy("Description"), 36, ""),
+    ("notes", _lazy("Notes"), 36, ""),
+]
+
+
+def company_column_spec():
+    """COMPANY_COLUMNS plus the template headers in every interface language."""
+    spec = {name: list(aliases) for name, aliases in COMPANY_COLUMNS.items()}
+    for code, _name in settings.LANGUAGES:
+        with translation.override(code):
+            for field_name, header, _width, _hint in TEMPLATE_COLUMNS:
+                alias = " ".join(str(header).split()).lower()
+                if alias not in spec.setdefault(field_name, []):
+                    spec[field_name].append(alias)
+    return spec
+
 
 EMAIL_RE = re.compile(r"[\w.+'-]+@[\w-]+(?:\.[\w-]+)+")
 EMAIL_LINE_RE = re.compile(
@@ -197,6 +232,35 @@ def _map_columns(header, spec):
     return mapping
 
 
+def _items(value, separators=r"[\n,;]"):
+    """Values separated by new lines, commas or semicolons."""
+    if value is None:
+        return []
+    return [item.strip() for item in re.split(separators, str(value)) if item.strip()]
+
+
+def parse_contact_line(line):
+    """'Full name / Position / e-mail / phone' -> dict for Contact (order of e-mail/phone free)."""
+    separator = r"\s+/\s+" if re.search(r"\s/\s", line) else r"\s*[,;]\s*"
+    parts = [p.strip() for p in re.split(separator, line) if p.strip()]
+    email = phone = ""
+    text = []
+    for part in parts:
+        if not email and EMAIL_RE.fullmatch(part):
+            email = _valid_email(part) or ""
+        elif not phone and sum(ch.isdigit() for ch in part) >= 6 and not re.search(r"[^\W\d_]", part):
+            phone = part
+        else:
+            text.append(part)
+    return {
+        "full_name": (text[0] if text else "")[:200],
+        "position": " / ".join(text[1:])[:300],
+        "category": Contact.Category.OTHER,
+        "email": email,
+        "phone": phone[:60],
+    }
+
+
 def _merge_lines(existing, new_lines):
     lines = _lines(existing)
     seen = {line.casefold() for line in lines}
@@ -310,7 +374,7 @@ class Importer:
         for sheet in workbook.worksheets:
             rows = list(sheet.iter_rows(values_only=True))
             for header_index, header in enumerate(rows[:HEADER_SCAN_ROWS]):
-                company_columns = _map_columns(header, COMPANY_COLUMNS)
+                company_columns = _map_columns(header, company_column_spec())
                 if "name" in company_columns and len(company_columns) > 1:
                     if industry is None:
                         industry = self.industry(industry_name)
@@ -358,10 +422,13 @@ class Importer:
             else:
                 self.report.companies_updated += 1
 
-            company.websites = _merge_lines(company.websites, _lines(cell(row, "websites")))
-            company.phones = _merge_lines(company.phones, _lines(cell(row, "phones")))
+            company.websites = _merge_lines(
+                company.websites, _items(cell(row, "websites"), r"[\n,;\s]+"))
+            company.phones = _merge_lines(company.phones, _items(cell(row, "phones")))
             for field_name, column in (("questionnaire_note", "questionnaire"),
-                                       ("website_check_note", "website_check")):
+                                       ("website_check_note", "website_check"),
+                                       ("city", "city"), ("address", "address"),
+                                       ("description", "description"), ("notes", "notes")):
                 value = _text(cell(row, column))
                 if value:
                     setattr(company, field_name, value)
@@ -373,6 +440,12 @@ class Importer:
                     industries.append(self.industry(industry_name))
             if industries:
                 company.industries.add(*industries)
+            tags = [Tag.objects.get_or_create(name=name[:100])[0]
+                    for name in _items(cell(row, "tags"))]
+            if tags:
+                company.tags.add(*tags)
+            for line in _lines(cell(row, "contacts")):
+                self._upsert_contact(company, parse_contact_line(line))
 
             for line in _lines(cell(row, "emails")):
                 for found in EMAIL_RE.findall(line):
@@ -416,13 +489,19 @@ class Importer:
             return
         contact, created = Contact.objects.get_or_create(
             company=company, full_name=data["full_name"], position=data["position"],
-            defaults={"category": data["category"], "email": data["email"]},
+            defaults={"category": data["category"], "email": data["email"],
+                      "phone": data.get("phone", "")},
         )
         if created:
             self.report.contacts_created += 1
-        elif data["email"] and not contact.email:
-            contact.email = data["email"]
-            contact.save()
+        else:
+            changed = False
+            for field_name in ("email", "phone"):
+                if data.get(field_name) and not getattr(contact, field_name):
+                    setattr(contact, field_name, data[field_name])
+                    changed = True
+            if changed:
+                contact.save()
         if data["email"]:
             # Several people may share one mailbox: do not overwrite what is already known.
             self._upsert_email(company, data["email"], Email.Source.WEBSITE,

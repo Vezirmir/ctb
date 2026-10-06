@@ -94,3 +94,15 @@ STORAGES = {
 }
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+# Hosting proxies (PythonAnywhere etc.) terminate HTTPS and pass the scheme in this header.
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+CSRF_FAILURE_VIEW = "directory.views.csrf_failure"
+
+# Send warnings (e.g. rejected forms) to the server error log in production too.
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "handlers": {"console": {"class": "logging.StreamHandler"}},
+    "root": {"handlers": ["console"], "level": "WARNING"},
+}

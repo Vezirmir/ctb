@@ -266,3 +266,24 @@ class AdminTests(TestCase):
         self.assertEqual(acme.country.iso_code, "BY")
         self.assertEqual(str(acme.industries.get()), "Automotive")
         self.assertIn("info@acme.by", acme.emails.values_list("email", flat=True))
+
+
+class CsrfFailureTests(TestCase):
+    def test_reason_is_shown(self):
+        client = self.client_class(enforce_csrf_checks=True)
+        response = client.post(reverse("admin:login"), {"username": "x", "password": "y"})
+        self.assertEqual(response.status_code, 403)
+        self.assertContains(response, "CSRF cookie not set", status_code=403)
+
+    def test_https_behind_proxy_passes_origin_check(self):
+        get_user_model().objects.create_superuser("admin", "a@example.com", "pw")
+        client = self.client_class(enforce_csrf_checks=True)
+        headers = {"HTTP_HOST": "testserver", "HTTP_X_FORWARDED_PROTO": "https",
+                   "HTTP_ORIGIN": "https://testserver",
+                   "HTTP_REFERER": "https://testserver/admin/login/"}
+        page = client.get(reverse("admin:login"), **headers)
+        token = page.context["csrf_token"]
+        response = client.post(reverse("admin:login"),
+                               {"username": "admin", "password": "pw", "csrfmiddlewaretoken": token},
+                               **headers)
+        self.assertEqual(response.status_code, 302)

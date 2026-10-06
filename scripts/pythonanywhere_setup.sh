@@ -8,7 +8,7 @@ REPO="https://github.com/Vezirmir/ctb.git"
 BRANCH="${CTB_BRANCH:-claude/youthful-lovelace-yrjgzy}"
 PYTHON="${CTB_PYTHON:-python3.13}"
 APP_DIR="$HOME/ctb"
-ME="$(whoami)"
+ME="$(whoami | tr '[:upper:]' '[:lower:]')"
 HOSTS="$ME.pythonanywhere.com,$ME.eu.pythonanywhere.com"
 ORIGINS="https://$ME.pythonanywhere.com,https://$ME.eu.pythonanywhere.com"
 

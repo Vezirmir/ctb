@@ -1,0 +1,22 @@
+{% load i18n %}<!doctype html>
+<html lang="{{ LANGUAGE_CODE|default:'en' }}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>403</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 0; background: #f8f8f8; color: #222; }
+    main { max-width: 640px; margin: 10vh auto; padding: 24px; background: #fff; border: 1px solid #ddd; border-radius: 6px; }
+    code { display: block; padding: 8px; background: #f2f2f2; white-space: pre-wrap; word-break: break-word; }
+  </style>
+</head>
+<body>
+<main>
+  <h1>{% translate "The form could not be sent" %}</h1>
+  <p>{% translate "Reload the page (Ctrl+F5) and try again. If it happens again, send this message to the administrator:" %}</p>
+  <code>CSRF: {{ reason }}
+Host: {{ request.get_host }} · Origin: {{ request.headers.Origin|default:"-" }} · Secure: {{ request.is_secure }}</code>
+  <p><a href="/admin/">{% translate "Back to the site" %}</a></p>
+</main>
+</body>
+</html>

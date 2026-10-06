@@ -424,3 +424,12 @@ msgstr "Klasörün tamamını .zip arşivi olarak yükleyin: içinde her liste <
 
 msgid "Language"
 msgstr "Dil"
+
+msgid "The form could not be sent"
+msgstr "Form gönderilemedi"
+
+msgid "Reload the page (Ctrl+F5) and try again. If it happens again, send this message to the administrator:"
+msgstr "Sayfayı yenileyin (Ctrl+F5) ve tekrar deneyin. Tekrar olursa bu mesajı yöneticiye gönderin:"
+
+msgid "Back to the site"
+msgstr "Siteye dön"

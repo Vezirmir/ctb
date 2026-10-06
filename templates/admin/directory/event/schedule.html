@@ -33,9 +33,10 @@
             <thead><tr class="bg-base-50 dark:bg-base-900">
                 <th class="px-3 py-2 text-left border-b border-base-200 dark:border-base-800 font-semibold text-important first:pl-6">{% translate "Time" %}</th>
                 <th class="px-3 py-2 text-left border-b border-base-200 dark:border-base-800 font-semibold text-important">{% translate "Table" %}</th>
-                <th class="px-3 py-2 text-left border-b border-base-200 dark:border-base-800 font-semibold text-important">{% translate "First company" %}</th>
-                <th class="px-3 py-2 text-left border-b border-base-200 dark:border-base-800 font-semibold text-important">{% translate "Second company" %}</th>
-                <th class="px-3 py-2 text-left border-b border-base-200 dark:border-base-800 font-semibold text-important last:pr-6">{% translate "Status" %}</th>
+                <th class="px-3 py-2 text-left border-b border-base-200 dark:border-base-800 font-semibold text-important ctb-wide">{% translate "First company" %}</th>
+                <th class="px-3 py-2 text-left border-b border-base-200 dark:border-base-800 font-semibold text-important ctb-wide">{% translate "Second company" %}</th>
+                <th class="px-3 py-2 text-left border-b border-base-200 dark:border-base-800 font-semibold text-important ctb-wide last:pr-6">{% translate "Status" %}</th>
+                <th class="px-3 py-2 text-left border-b border-base-200 dark:border-base-800 font-semibold text-important ctb-narrow pr-6">{% translate "Meeting" %}</th>
             </tr></thead>
             <tbody>
             {% for m in meetings %}
@@ -43,9 +44,14 @@
                 <tr class="{{ rowclass }}">
                     <td class="px-3 py-2 border-b border-base-200 dark:border-base-800 first:pl-6 font-semibold text-important">{% ifchanged m.scheduled_at %}{{ m.scheduled_at|time:"H:i" }}{% endifchanged %}</td>
                     <td class="px-3 py-2 border-b border-base-200 dark:border-base-800">{{ m.table|default:"—" }}</td>
-                    <td class="px-3 py-2 border-b border-base-200 dark:border-base-800">{{ m.company_a.name }} <span class="text-subtle text-xs">{{ m.company_a.country|default:"" }}</span></td>
-                    <td class="px-3 py-2 border-b border-base-200 dark:border-base-800">{{ m.company_b.name }} <span class="text-subtle text-xs">{{ m.company_b.country|default:"" }}</span></td>
-                    <td class="px-3 py-2 border-b border-base-200 dark:border-base-800 last:pr-6">{% include "unfold/helpers/label.html" with text=m.get_status_display %}</td>
+                    <td class="px-3 py-2 border-b border-base-200 dark:border-base-800 ctb-wide">{{ m.company_a.name }} <span class="text-subtle text-xs">{{ m.company_a.country|default:"" }}</span></td>
+                    <td class="px-3 py-2 border-b border-base-200 dark:border-base-800 ctb-wide">{{ m.company_b.name }} <span class="text-subtle text-xs">{{ m.company_b.country|default:"" }}</span></td>
+                    <td class="px-3 py-2 border-b border-base-200 dark:border-base-800 ctb-wide last:pr-6">{% include "unfold/helpers/label.html" with text=m.get_status_display %}</td>
+                    <td class="px-3 py-2 border-b border-base-200 dark:border-base-800 ctb-narrow pr-6">
+                        <div class="text-important">{{ m.company_a.name }}</div>
+                        <div class="text-important">↔ {{ m.company_b.name }}</div>
+                        {% if m.status != "planned" %}<div class="mt-1">{% include "unfold/helpers/label.html" with text=m.get_status_display %}</div>{% endif %}
+                    </td>
                 </tr>
             {% endfor %}
             </tbody>

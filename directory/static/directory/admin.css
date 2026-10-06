@@ -19,3 +19,29 @@
         width: 9rem !important;
     }
 }
+
+/* Columns shown only on wide (.ctb-wide) or only on narrow (.ctb-narrow) screens. */
+@media (max-width: 1023px) {
+    .ctb-wide {
+        display: none !important;
+    }
+
+    /* Unfold right-aligns the name/subtitle block on phones; keep it next to the avatar. */
+    #result_list .flex-col.text-right {
+        text-align: left;
+    }
+
+    /* Inline tables (e-mails, contacts, participants) become stacked cards on phones. */
+    tr.form-row > td.field-tabular {
+        display: block;
+        width: 100%;
+        padding-left: 0.75rem;
+        padding-right: 0.75rem;
+    }
+}
+
+@media (min-width: 1024px) {
+    .ctb-narrow {
+        display: none !important;
+    }
+}

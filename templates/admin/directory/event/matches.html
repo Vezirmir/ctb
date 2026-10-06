@@ -30,26 +30,32 @@
             <thead>
                 <tr class="bg-base-50 dark:bg-base-900">
                     <th class="px-3 py-2 text-left border-b border-base-200 dark:border-base-800 first:pl-6"><input type="checkbox" checked onclick="document.querySelectorAll('input[name=pair]').forEach(c => c.checked = this.checked)"></th>
-                    <th class="px-3 py-2 text-left border-b border-base-200 dark:border-base-800 font-semibold text-important">{% translate "First company" %}</th>
-                    <th class="px-3 py-2 text-left border-b border-base-200 dark:border-base-800 font-semibold text-important">{% translate "Second company" %}</th>
+                    <th class="px-3 py-2 text-left border-b border-base-200 dark:border-base-800 font-semibold text-important ctb-wide">{% translate "First company" %}</th>
+                    <th class="px-3 py-2 text-left border-b border-base-200 dark:border-base-800 font-semibold text-important ctb-wide">{% translate "Second company" %}</th>
+                    <th class="px-3 py-2 text-left border-b border-base-200 dark:border-base-800 font-semibold text-important ctb-narrow">{% translate "Pair" %}</th>
                     <th class="px-3 py-2 text-left border-b border-base-200 dark:border-base-800 font-semibold text-important">{% translate "Score" %}</th>
-                    <th class="px-3 py-2 text-left border-b border-base-200 dark:border-base-800 font-semibold text-important last:pr-6">{% translate "Why" %}</th>
+                    <th class="px-3 py-2 text-left border-b border-base-200 dark:border-base-800 font-semibold text-important ctb-wide last:pr-6">{% translate "Why" %}</th>
                 </tr>
             </thead>
             <tbody>
             {% for s in suggestions %}
                 <tr class="{% cycle '' 'bg-base-50 dark:bg-white/[.02]' %}">
                     <td class="px-3 py-2 border-b border-base-200 dark:border-base-800 first:pl-6"><input type="checkbox" name="pair" value="{{ s.key }}" {% if s.key in preselected %}checked{% endif %}></td>
-                    <td class="px-3 py-2 border-b border-base-200 dark:border-base-800">
+                    <td class="px-3 py-2 border-b border-base-200 dark:border-base-800 ctb-narrow">
+                        <div class="text-important">{{ s.a.company.name }}</div>
+                        <div class="text-important">↔ {{ s.b.company.name }}</div>
+                        <div class="text-subtle text-xs mt-1">{{ s.reasons|join:"; " }}</div>
+                    </td>
+                    <td class="px-3 py-2 border-b border-base-200 dark:border-base-800 ctb-wide">
                         <span class="text-important">{{ s.a.company.name }}</span><br>
                         <span class="text-subtle text-xs">{{ s.a.company.country|default:"—" }}{% if s.a.role %} · {{ s.a.get_role_display }}{% endif %}</span>
                     </td>
-                    <td class="px-3 py-2 border-b border-base-200 dark:border-base-800">
+                    <td class="px-3 py-2 border-b border-base-200 dark:border-base-800 ctb-wide">
                         <span class="text-important">{{ s.b.company.name }}</span><br>
                         <span class="text-subtle text-xs">{{ s.b.company.country|default:"—" }}{% if s.b.role %} · {{ s.b.get_role_display }}{% endif %}</span>
                     </td>
                     <td class="px-3 py-2 border-b border-base-200 dark:border-base-800">{% include "unfold/helpers/label.html" with text=s.score type="primary" %}</td>
-                    <td class="px-3 py-2 border-b border-base-200 dark:border-base-800 text-sm last:pr-6">{{ s.reasons|join:"; " }}</td>
+                    <td class="px-3 py-2 border-b border-base-200 dark:border-base-800 ctb-wide text-sm last:pr-6">{{ s.reasons|join:"; " }}</td>
                 </tr>
             {% endfor %}
             </tbody>

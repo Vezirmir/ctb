@@ -938,3 +938,9 @@ msgid "The event has %(n)s participant."
 msgid_plural "The event has %(n)s participants."
 msgstr[0] "Etkinlikte %(n)s katılımcı var."
 msgstr[1] "Etkinlikte %(n)s katılımcı var."
+
+msgid "Meeting"
+msgstr "Görüşme"
+
+msgid "Pair"
+msgstr "Eşleşme"

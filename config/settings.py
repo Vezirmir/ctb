@@ -120,6 +120,56 @@ def _changelist(model):
     return reverse_lazy(f"admin:directory_{model}_changelist")
 
 
+def _scale(lightness, chroma, hue):
+    """Tailwind-style 50…950 palette from lists of OKLCH lightness and chroma."""
+    steps = ["50", "100", "200", "300", "400", "500", "600", "700", "800", "900", "950"]
+    return {step: f"oklch({l}% {c} {hue})" for step, l, c in zip(steps, lightness, chroma)}
+
+
+# Colour themes. Pick one with the CTB_THEME environment variable.
+THEMES = {
+    # Blue on neutral grey, light or dark as the user prefers.
+    "classic": {
+        "mode": None,
+        "styles": [],
+        "colors": {
+            "primary": _scale([97, 93.2, 88.2, 80.9, 70.7, 62.3, 54.6, 48.8, 42.4, 37.9, 28.2],
+                              [.014, .032, .059, .105, .165, .214, .245, .243, .199, .146, .091], 260),
+        },
+    },
+    # Inspired by n8n.io: violet-black surfaces, pink brand colour, ember gradient buttons.
+    "n8n": {
+        "mode": "dark",
+        "styles": ["directory/theme-n8n.css"],
+        "colors": {
+            "base": _scale([98.5, 96.5, 92.5, 86, 70, 55, 44, 34, 24, 17.5, 13.5],
+                           [.004, .007, .011, .015, .024, .03, .034, .038, .038, .034, .03], 300),
+            "primary": _scale([97, 94, 89, 82, 74, 67, 61, 53, 46, 39, 28],
+                              [.015, .03, .06, .1, .15, .185, .2, .19, .16, .13, .09], 10),
+        },
+    },
+    # Inspired by cursor.com: warm paper-like off-white, dark warm-brown text, orange accent.
+    "cursor": {
+        "mode": "light",
+        "styles": ["directory/theme-cursor.css"],
+        "colors": {
+            "base": _scale([97.8, 95.6, 91.9, 85, 70, 56, 45, 37, 28, 25.5, 17],
+                           [.004, .005, .006, .008, .01, .012, .012, .012, .012, .013, .01], 95),
+            "primary": _scale([97, 94, 88, 80, 72, 66, 62, 54, 46, 39, 28],
+                              [.02, .04, .08, .13, .18, .21, .22, .19, .16, .13, .09], 41),
+            "font": {
+                "subtle-light": "var(--color-base-500)",
+                "subtle-dark": "var(--color-base-400)",
+                "default-light": "var(--color-base-700)",
+                "default-dark": "var(--color-base-300)",
+                "important-light": "var(--color-base-900)",
+                "important-dark": "var(--color-base-100)",
+            },
+        },
+    },
+}
+THEME = THEMES.get(os.environ.get("CTB_THEME", "classic"), THEMES["classic"])
+
 UNFOLD = {
     "SITE_TITLE": "CTB",
     "SITE_HEADER": "CTB",
@@ -129,23 +179,12 @@ UNFOLD = {
     "SHOW_VIEW_ON_SITE": False,
     "SHOW_LANGUAGES": True,
     "SHOW_BACK_BUTTON": True,
+    **({"THEME": THEME["mode"]} if THEME["mode"] else {}),
     "DASHBOARD_CALLBACK": "directory.dashboard.dashboard_callback",
-    "STYLES": [lambda request: static("directory/admin.css")],
-    "COLORS": {
-        "primary": {
-            "50": "oklch(97% .014 254.604)",
-            "100": "oklch(93.2% .032 255.585)",
-            "200": "oklch(88.2% .059 254.128)",
-            "300": "oklch(80.9% .105 251.813)",
-            "400": "oklch(70.7% .165 254.624)",
-            "500": "oklch(62.3% .214 259.815)",
-            "600": "oklch(54.6% .245 262.881)",
-            "700": "oklch(48.8% .243 264.376)",
-            "800": "oklch(42.4% .199 265.638)",
-            "900": "oklch(37.9% .146 265.522)",
-            "950": "oklch(28.2% .091 267.935)",
-        },
-    },
+    "STYLES": [lambda request: static("directory/admin.css")] + [
+        (lambda request, path=path: static(path)) for path in THEME["styles"]
+    ],
+    "COLORS": THEME["colors"],
     "SIDEBAR": {
         "show_search": True,
         "show_all_applications": False,
@@ -160,7 +199,7 @@ UNFOLD = {
                 "title": _("Database"),
                 "items": [
                     {"title": _("Companies"), "icon": "apartment", "link": _changelist("company"),
-                     "badge": "directory.dashboard.company_badge", "badge_variant": "info"},
+                     "badge": "directory.dashboard.company_badge", "badge_variant": "primary"},
                     {"title": _("E-mail addresses"), "icon": "alternate_email",
                      "link": _changelist("email")},
                     {"title": _("Contact persons"), "icon": "contacts", "link": _changelist("contact")},

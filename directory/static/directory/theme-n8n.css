@@ -1,0 +1,32 @@
+/* n8n-like look: violet-black canvas with a soft glow, ember gradient on primary buttons. */
+.dark #main {
+    background:
+        radial-gradient(1100px 520px at 85% -8%, rgb(122 90 248 / 0.16), transparent 70%),
+        radial-gradient(900px 480px at 10% 105%, rgb(234 75 113 / 0.10), transparent 70%),
+        var(--color-base-950);
+    background-attachment: fixed;
+}
+
+.dark #main > .dark\:bg-base-900:first-child {
+    background-color: rgb(14 9 24 / 0.6);
+    backdrop-filter: blur(8px);
+}
+
+.dark #nav-sidebar,
+.dark #nav-sidebar-inner {
+    background-color: var(--color-base-950);
+}
+
+a.bg-primary-600, button.bg-primary-600, input[type=submit].bg-primary-600 {
+    background-image: linear-gradient(90deg, rgb(253 137 37), rgb(255 12 0));
+    border-color: transparent !important;
+    box-shadow: 0 0 24px rgb(255 60 20 / 0.25);
+}
+
+a.bg-primary-600:hover, button.bg-primary-600:hover {
+    box-shadow: 0 0 32px rgb(255 60 20 / 0.4);
+}
+
+.dark .bg-white.dark\:bg-base-900 {
+    background-color: rgb(24 18 38 / 0.72);
+}

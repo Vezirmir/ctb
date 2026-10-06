@@ -1,0 +1,426 @@
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: ctb\n"
+"Language: tr\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n > 1);\n"
+
+msgid "English"
+msgstr "İngilizce"
+
+msgid "Turkish"
+msgstr "Türkçe"
+
+msgid "CTB — B2B company database"
+msgstr "CTB — B2B firma veritabanı"
+
+msgid "CTB"
+msgstr "CTB"
+
+msgid "Company directory"
+msgstr "Firma rehberi"
+
+msgid "companies"
+msgstr "firmalar"
+
+msgid "replied to CTB"
+msgstr "CTB'ye yanıt verdi"
+
+msgid "Yes"
+msgstr "Evet"
+
+msgid "No"
+msgstr "Hayır"
+
+msgid "Contact details"
+msgstr "İletişim bilgileri"
+
+msgid "Details"
+msgstr "Ayrıntılar"
+
+msgid "Checks"
+msgstr "Kontroller"
+
+msgid "industries"
+msgstr "sektörler"
+
+msgid "websites"
+msgstr "web siteleri"
+
+msgid "e-mails"
+msgstr "e-postalar"
+
+msgid "contact persons"
+msgstr "irtibat kişileri"
+
+msgid "Export selected companies to Excel"
+msgstr "Seçili firmaları Excel'e aktar"
+
+msgid "The archive could not be read."
+msgstr "Arşiv okunamadı."
+
+msgid "Import companies from Excel"
+msgstr "Excel'den firma içe aktar"
+
+msgid "participants"
+msgstr "katılımcılar"
+
+msgid "Companies"
+msgstr "Firmalar"
+
+msgid "Name"
+msgstr "Ad"
+
+msgid "Country"
+msgstr "Ülke"
+
+msgid "Industries"
+msgstr "Sektörler"
+
+msgid "City"
+msgstr "Şehir"
+
+msgid "Websites"
+msgstr "Web siteleri"
+
+msgid "Phones"
+msgstr "Telefonlar"
+
+msgid "E-mails"
+msgstr "E-postalar"
+
+msgid "Contact persons"
+msgstr "İrtibat kişileri"
+
+msgid "Tags"
+msgstr "Etiketler"
+
+msgid "Description"
+msgstr "Açıklama"
+
+msgid "Notes"
+msgstr "Notlar"
+
+msgid "File"
+msgstr "Dosya"
+
+msgid "A .zip archive with folders <Industry>/<Country>/<file>.xlsx, or a single .xlsx file."
+msgstr "<Sektör>/<Ülke>/<dosya>.xlsx klasörlerini içeren bir .zip arşivi veya tek bir .xlsx dosyası."
+
+msgid "Industry"
+msgstr "Sektör"
+
+msgid "For a single .xlsx file. If empty, it is taken from the file name “Industry - Country.xlsx”."
+msgstr "Tek bir .xlsx dosyası için. Boş bırakılırsa “Sektör - Ülke.xlsx” dosya adından alınır."
+
+msgid "For a single .xlsx file."
+msgstr "Tek bir .xlsx dosyası için."
+
+msgid "Upload a .zip or .xlsx file."
+msgstr "Bir .zip veya .xlsx dosyası yükleyin."
+
+#, python-format
+msgid "Files: %(files)d. Companies: %(created)d new, %(updated)d updated. E-mails: %(emails)d new. Contact persons: %(contacts)d new. E-mails without company: %(unassigned)d new."
+msgstr "Dosyalar: %(files)d. Firmalar: %(created)d yeni, %(updated)d güncellendi. E-postalar: %(emails)d yeni. İrtibat kişileri: %(contacts)d yeni. Firmasız e-postalar: %(unassigned)d yeni."
+
+#, python-format
+msgid "New country “%(name)s” was created; please add its English and Turkish names."
+msgstr "Yeni ülke “%(name)s” oluşturuldu; lütfen İngilizce ve Türkçe adlarını ekleyin."
+
+#, python-format
+msgid "New industry “%(name)s” was created; please add its English and Turkish names."
+msgstr "Yeni sektör “%(name)s” oluşturuldu; lütfen İngilizce ve Türkçe adlarını ekleyin."
+
+#, python-format
+msgid "%(file)s: not a readable Excel file."
+msgstr "%(file)s: okunabilir bir Excel dosyası değil."
+
+#, python-format
+msgid "%(file)s: no company list found (a “Company name” column is required)."
+msgstr "%(file)s: firma listesi bulunamadı (“Firma adı” sütunu gerekli)."
+
+#, python-format
+msgid "%(file)s, sheet %(sheet)s, row %(row)d: skipped, company name is empty."
+msgstr "%(file)s, sayfa %(sheet)s, satır %(row)d: atlandı, firma adı boş."
+
+msgid "The archive is too large."
+msgstr "Arşiv çok büyük."
+
+msgid "A file in the archive is too large."
+msgstr "Arşivdeki bir dosya çok büyük."
+
+msgid "name (English)"
+msgstr "ad (İngilizce)"
+
+msgid "name (Turkish)"
+msgstr "ad (Türkçe)"
+
+msgid "name (Russian)"
+msgstr "ad (Rusça)"
+
+msgid "Used to match folder names and spreadsheets during import."
+msgstr "İçe aktarma sırasında klasör adlarını ve tabloları eşleştirmek için kullanılır."
+
+msgid "ISO code"
+msgstr "ISO kodu"
+
+msgid "Two-letter code, e.g. TR, DE, KZ."
+msgstr "İki harfli kod, ör. TR, DE, KZ."
+
+msgid "country"
+msgstr "ülke"
+
+msgid "countries"
+msgstr "ülkeler"
+
+msgid "parent industry"
+msgstr "üst sektör"
+
+msgid "industry"
+msgstr "sektör"
+
+msgid "An industry cannot be its own parent."
+msgstr "Bir sektör kendisinin üst sektörü olamaz."
+
+msgid "name"
+msgstr "ad"
+
+msgid "tag"
+msgstr "etiket"
+
+msgid "tags"
+msgstr "etiketler"
+
+msgid "Micro (1–9)"
+msgstr "Mikro (1–9)"
+
+msgid "Small (10–49)"
+msgstr "Küçük (10–49)"
+
+msgid "Medium (50–249)"
+msgstr "Orta (50–249)"
+
+msgid "Large (250+)"
+msgstr "Büyük (250+)"
+
+msgid "city"
+msgstr "şehir"
+
+msgid "size"
+msgstr "büyüklük"
+
+msgid "One per line."
+msgstr "Her satıra bir tane."
+
+msgid "phones"
+msgstr "telefonlar"
+
+msgid "address"
+msgstr "adres"
+
+msgid "description"
+msgstr "açıklama"
+
+msgid "notes"
+msgstr "notlar"
+
+msgid "questionnaire check"
+msgstr "anket kontrolü"
+
+msgid "website check"
+msgstr "web sitesi kontrolü"
+
+msgid "created"
+msgstr "oluşturulma"
+
+msgid "updated"
+msgstr "güncellenme"
+
+msgid "company"
+msgstr "firma"
+
+msgid "Company list"
+msgstr "Firma listesi"
+
+msgid "Company website"
+msgstr "Firma web sitesi"
+
+msgid "CTB mailbox"
+msgstr "CTB posta kutusu"
+
+msgid "Entered manually"
+msgstr "Elle girildi"
+
+msgid "Leave empty if the company is not known yet."
+msgstr "Firma henüz bilinmiyorsa boş bırakın."
+
+msgid "e-mail"
+msgstr "e-posta"
+
+msgid "source"
+msgstr "kaynak"
+
+msgid "person"
+msgstr "kişi"
+
+msgid "department / role"
+msgstr "departman / görev"
+
+msgid "group"
+msgstr "grup"
+
+msgid "Grouping for e-mails that are not linked to a company."
+msgstr "Bir firmaya bağlı olmayan e-postalar için gruplama."
+
+msgid "CTB correspondence"
+msgstr "CTB yazışmaları"
+
+msgid "e-mails sent"
+msgstr "gönderilen e-postalar"
+
+msgid "last sent"
+msgstr "son gönderim"
+
+msgid "replied"
+msgstr "yanıt verdi"
+
+msgid "needs review"
+msgstr "kontrol gerekli"
+
+msgid "The link to the company was guessed and should be checked."
+msgstr "Firma ile bağlantı tahmine dayanıyor, kontrol edilmeli."
+
+msgid "e-mail address"
+msgstr "e-posta adresi"
+
+msgid "e-mail addresses"
+msgstr "e-posta adresleri"
+
+msgid "Management"
+msgstr "Yönetim"
+
+msgid "Procurement"
+msgstr "Satın alma"
+
+msgid "Sales"
+msgstr "Satış"
+
+msgid "Other"
+msgstr "Diğer"
+
+msgid "full name"
+msgstr "ad soyad"
+
+msgid "position"
+msgstr "pozisyon"
+
+msgid "category"
+msgstr "kategori"
+
+msgid "phone"
+msgstr "telefon"
+
+msgid "contact person"
+msgstr "irtibat kişisi"
+
+msgid "Enter a name or a position."
+msgstr "Bir ad veya pozisyon girin."
+
+msgid "start date"
+msgstr "başlangıç tarihi"
+
+msgid "end date"
+msgstr "bitiş tarihi"
+
+msgid "event"
+msgstr "etkinlik"
+
+msgid "events"
+msgstr "etkinlikler"
+
+msgid "End date cannot be before start date."
+msgstr "Bitiş tarihi başlangıç tarihinden önce olamaz."
+
+msgid "Buyer"
+msgstr "Alıcı"
+
+msgid "Seller"
+msgstr "Satıcı"
+
+msgid "Buyer and seller"
+msgstr "Alıcı ve satıcı"
+
+msgid "role"
+msgstr "rol"
+
+msgid "interests"
+msgstr "ilgi alanları"
+
+msgid "What the company is looking for or offering at this event."
+msgstr "Firmanın bu etkinlikte aradığı veya sunduğu."
+
+msgid "participation"
+msgstr "katılım"
+
+msgid "participations"
+msgstr "katılımlar"
+
+msgid "Planned"
+msgstr "Planlandı"
+
+msgid "Held"
+msgstr "Gerçekleşti"
+
+msgid "Cancelled"
+msgstr "İptal edildi"
+
+msgid "first company"
+msgstr "birinci firma"
+
+msgid "second company"
+msgstr "ikinci firma"
+
+msgid "scheduled at"
+msgstr "planlanan zaman"
+
+msgid "status"
+msgstr "durum"
+
+msgid "outcome"
+msgstr "sonuç"
+
+msgid "meeting"
+msgstr "görüşme"
+
+msgid "meetings"
+msgstr "görüşmeler"
+
+msgid "A company cannot meet with itself."
+msgstr "Bir firma kendisiyle görüşemez."
+
+msgid "Import from Excel"
+msgstr "Excel'den içe aktar"
+
+msgid "Home"
+msgstr "Ana sayfa"
+
+msgid "Import"
+msgstr "İçe aktar"
+
+msgid "Result"
+msgstr "Sonuç"
+
+msgid "Files"
+msgstr "Dosyalar"
+
+msgid "Warnings"
+msgstr "Uyarılar"
+
+msgid "Upload the whole folder as a .zip archive: inside it, each list must be in <code>Industry/Country/file.xlsx</code>. The industry and country are taken from the folder names. Importing the same files again does not create duplicates."
+msgstr "Klasörün tamamını .zip arşivi olarak yükleyin: içinde her liste <code>Sektör/Ülke/dosya.xlsx</code> yolunda olmalıdır. Sektör ve ülke klasör adlarından alınır. Aynı dosyaları tekrar içe aktarmak kopya oluşturmaz."
+
+msgid "Language"
+msgstr "Dil"

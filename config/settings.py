@@ -4,6 +4,7 @@ import os
 from pathlib import Path
 
 import dj_database_url
+from django.templatetags.static import static
 from django.urls import reverse_lazy
 from django.utils.translation import gettext_lazy as _
 
@@ -129,6 +130,7 @@ UNFOLD = {
     "SHOW_LANGUAGES": True,
     "SHOW_BACK_BUTTON": True,
     "DASHBOARD_CALLBACK": "directory.dashboard.dashboard_callback",
+    "STYLES": [lambda request: static("directory/admin.css")],
     "COLORS": {
         "primary": {
             "50": "oklch(97% .014 254.604)",

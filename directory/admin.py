@@ -171,13 +171,20 @@ class CompanyAdmin(ModelAdmin):
     actions_list = ["import_excel"]
     list_per_page = 50
     readonly_fields = ["created_at", "updated_at"]
-    formfield_overrides = {models.TextField: {"widget": UnfoldAdminTextareaWidget(attrs={"rows": 3})}}
+    formfield_overrides = {models.TextField: {"widget": UnfoldAdminTextareaWidget(attrs={"rows": 2})}}
     fieldsets = [
-        (_("Company"), {"fields": ["name", ("country", "city"), "industries", "tags", "size"]}),
-        (_("Contact details"), {"fields": ["websites", "phones", "address"]}),
-        (_("Details"), {"fields": ["description", "notes"]}),
+        (_("Company"), {"fields": [
+            ("name", "country"),
+            ("industries", "city"),
+            ("tags", "size"),
+        ]}),
+        (_("Contact details"), {"fields": [
+            ("websites", "phones"),
+            ("address", "description"),
+            "notes",
+        ]}),
         (_("Checks"), {
-            "fields": ["questionnaire_note", "website_check_note", ("created_at", "updated_at")],
+            "fields": [("questionnaire_note", "website_check_note"), ("created_at", "updated_at")],
             "classes": ["collapse"],
         }),
     ]
@@ -303,7 +310,7 @@ class EmailAdmin(ModelAdmin):
     list_select_related = ["company"]
     date_hierarchy = "last_sent_on"
     fieldsets = [
-        (None, {"fields": ["email", "company", "source", "person_name", "description", "group"]}),
+        (None, {"fields": [("email", "company"), ("source", "person_name"), ("description", "group")]}),
         (_("CTB correspondence"), {"fields": [("sent_count", "last_sent_on"),
                                               ("replied", "needs_review"), "correspondence"]}),
         (_("Notes"), {"fields": ["notes"]}),
@@ -327,6 +334,8 @@ class ContactAdmin(ModelAdmin):
     search_fields = ["full_name", "position", "email", "phone", "company__name"]
     autocomplete_fields = ["company"]
     list_select_related = ["company"]
+    fields = [("full_name", "position"), ("company", "category"), ("email", "phone"), "notes"]
+    formfield_overrides = {models.TextField: {"widget": UnfoldAdminTextareaWidget(attrs={"rows": 2})}}
 
     @display(description=_("contact person"), header=True, ordering="full_name")
     def person(self, obj):
@@ -490,8 +499,9 @@ class ParticipationAdmin(ModelAdmin):
     autocomplete_fields = ["event", "company", "wanted_industries", "wanted_countries"]
     list_select_related = ["company", "event"]
     actions = ["mark_confirmed", "mark_declined", "mark_attended"]
-    fields = ["event", "company", ("role", "status"), "wanted_industries", "wanted_countries",
-              "max_meetings", "interests"]
+    fields = [("event", "company"), ("role", "status"), ("wanted_industries", "wanted_countries"),
+              ("max_meetings", "interests")]
+    formfield_overrides = {models.TextField: {"widget": UnfoldAdminTextareaWidget(attrs={"rows": 2})}}
 
     def get_queryset(self, request):
         return super().get_queryset(request).prefetch_related("wanted_industries",

@@ -1,0 +1,21 @@
+/* Compact forms: fields grouped in one fieldset line sit side by side on wide screens. */
+@media (min-width: 1024px) {
+    .form-row:has(> .field-line + .field-line) {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .form-row:has(> .field-line + .field-line) > .field-line + .field-line {
+        border-left: 1px dashed var(--color-base-200);
+    }
+
+    .dark .form-row:has(> .field-line + .field-line) > .field-line + .field-line {
+        border-left-color: var(--color-base-800);
+    }
+
+    /* Narrower label column so two fields fit in a row. */
+    .field-line > div:first-child {
+        min-width: 9rem !important;
+        width: 9rem !important;
+    }
+}

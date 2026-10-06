@@ -8,3 +8,4 @@ staticfiles/
 data/
 *.zip
 ~$*
+.secret_key

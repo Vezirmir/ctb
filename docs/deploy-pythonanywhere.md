@@ -11,6 +11,24 @@
 1. Откройте https://www.pythonanywhere.com/pricing/ и выберите **Create a Beginner account** (бесплатно).
 2. Логин станет частью адреса сайта, например `ctb` → `ctb.pythonanywhere.com`.
 
+## Быстрый способ: одна команда
+
+1. Вкладка **Web** → **Add a new web app** → **Next** → **Manual configuration** → **Python 3.12** → **Next**.
+2. Вкладка **Consoles** → **Bash**. Вставьте команду и нажмите Enter:
+
+   ```bash
+   curl -sSL https://raw.githubusercontent.com/Vezirmir/ctb/claude/youthful-lovelace-yrjgzy/scripts/pythonanywhere_setup.sh | bash
+   ```
+
+   Скрипт скачает и установит проект и подготовит базу. Он спросит логин, e-mail и пароль
+   администратора: с ними вы будете входить на сайт.
+3. Вкладка **Web**: в поле **Virtualenv** впишите `/home/ВАШ_ЛОГИН/ctb/.venv` и нажмите зелёную кнопку **Reload**.
+
+Готово, переходите к шагу 4 «Загрузить данные». Той же командой потом обновляется сайт
+после изменений в коде (после неё снова нажмите **Reload**).
+
+Ниже то же самое вручную, если быстрый способ не сработал.
+
 ## 2. Скачать проект и установить
 
 На вкладке **Consoles** нажмите **Bash** и выполните команды по очереди:

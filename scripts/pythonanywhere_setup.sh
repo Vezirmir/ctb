@@ -6,7 +6,7 @@ set -euo pipefail
 
 REPO="https://github.com/Vezirmir/ctb.git"
 BRANCH="${CTB_BRANCH:-claude/youthful-lovelace-yrjgzy}"
-PYTHON="${CTB_PYTHON:-python3.12}"
+PYTHON="${CTB_PYTHON:-python3.13}"
 APP_DIR="$HOME/ctb"
 ME="$(whoami)"
 HOSTS="$ME.pythonanywhere.com,$ME.eu.pythonanywhere.com"
@@ -23,6 +23,10 @@ fi
 cd "$APP_DIR"
 
 echo "==> 2/6 Installing packages (takes a minute or two)"
+# Recreate the virtualenv if it was made with another Python version.
+if [ -x .venv/bin/python ] && [ "$(.venv/bin/python -c 'import sys; print(sys.version_info[:2])')" != "$("$PYTHON" -c 'import sys; print(sys.version_info[:2])')" ]; then
+    rm -rf .venv
+fi
 [ -d .venv ] || "$PYTHON" -m venv .venv
 # shellcheck disable=SC1091
 source .venv/bin/activate

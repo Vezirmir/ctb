@@ -13,7 +13,7 @@
 
 ## Быстрый способ: одна команда
 
-1. Вкладка **Web** → **Add a new web app** → **Next** → **Manual configuration** → **Python 3.12** → **Next**.
+1. Вкладка **Web** → **Add a new web app** → **Next** → **Manual configuration** → **Python 3.13** → **Next**.
 2. Вкладка **Consoles** → **Bash**. Вставьте команду и нажмите Enter:
 
    ```bash
@@ -36,7 +36,7 @@
 ```bash
 git clone -b claude/youthful-lovelace-yrjgzy https://github.com/Vezirmir/ctb.git
 cd ctb
-python3.12 -m venv .venv
+python3.13 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 python manage.py migrate
@@ -56,7 +56,7 @@ python -c "import secrets; print(secrets.token_urlsafe(50))"
 
 ## 3. Создать сайт
 
-1. Вкладка **Web** → **Add a new web app** → **Next** → **Manual configuration** → **Python 3.12** → **Next**.
+1. Вкладка **Web** → **Add a new web app** → **Next** → **Manual configuration** → **Python 3.13** → **Next**.
 2. В разделе **Virtualenv** укажите `/home/ВАШ_ЛОГИН/ctb/.venv`.
 3. В разделе **Code** откройте ссылку **WSGI configuration file**, удалите всё содержимое и вставьте:
 

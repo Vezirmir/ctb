@@ -944,3 +944,6 @@ msgstr "Görüşme"
 
 msgid "Pair"
 msgstr "Eşleşme"
+
+msgid "Use the login and password you were given."
+msgstr "Size verilen kullanıcı adı ve parolayı kullanın."

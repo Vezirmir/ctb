@@ -1,14 +1,192 @@
-/* cursor.com-like look: warm off-white canvas, white cards on it, tight headings. */
+/*
+ * Cursor-style theme (see cursor.com): warm cream canvas, white cards with 1px hairlines,
+ * no shadows, regular-weight headings with tight tracking, orange only for main actions,
+ * pill-shaped uppercase tags, JetBrains Mono for code.
+ */
+
+:root {
+    --border-radius: 8px;          /* buttons and inputs */
+}
+
+body {
+    letter-spacing: -0.005em;
+}
+
+code, kbd, pre, samp {
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+}
+
+/* One cream canvas for page, header and sidebar; cards stay white. */
+html:not(.dark) body,
 html:not(.dark) #main,
-html:not(.dark) #main > .bg-white:first-child {
+html:not(.dark) #main > .bg-white:first-child,
+html:not(.dark) #nav-sidebar,
+html:not(.dark) #nav-sidebar-inner {
     background-color: var(--color-base-100);
 }
 
-html:not(.dark) #nav-sidebar,
-html:not(.dark) #nav-sidebar-inner {
-    background-color: var(--color-base-200);
+/* Hairline-only depth. */
+.shadow-xs, .shadow-sm, .shadow-md, .shadow-lg {
+    box-shadow: none !important;
 }
 
-h1, h2 {
-    letter-spacing: -0.02em;
+/* Cards, tables and form panels: 12px corners. */
+.rounded-default.overflow-hidden.border {
+    border-radius: 12px;
+}
+
+/* Headings: regular weight, editorial tracking. */
+#content h1 {
+    font-weight: 400;
+    letter-spacing: -0.025em;
+}
+
+.ctb-display {
+    font-size: 34px !important;
+    line-height: 1.2;
+    font-weight: 400 !important;
+    letter-spacing: -0.7px;
+}
+
+.ctb-kpi {
+    font-weight: 400 !important;
+    letter-spacing: -0.04em;
+}
+
+/* Section labels in tables and fieldsets: small uppercase captions. */
+#result_list thead th,
+#content table thead th {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--color-base-500);
+}
+
+/* Tags and status labels: pills. */
+span.uppercase.rounded-default,
+a.uppercase.rounded-default {
+    border-radius: 9999px;
+    padding-left: 10px;
+    padding-right: 10px;
+    letter-spacing: 0.07em;
+}
+
+/* Orange stays scarce: card icons and active menu items use ink instead. */
+#content div.bg-primary-600 {
+    background-color: var(--color-base-100);
+    background-image: none;
+    border-color: var(--color-base-200) !important;
+    color: var(--color-base-800);
+}
+
+#nav-sidebar .text-primary-600,
+#nav-sidebar .text-primary-500 {
+    color: var(--color-base-800) !important;
+}
+
+html:not(.dark) #nav-sidebar a.bg-base-100,
+html:not(.dark) #nav-sidebar a[class*="bg-base-"] .active {
+    background-color: #fff;
+}
+
+.dark #content div.bg-primary-600 {
+    background-color: var(--color-base-800);
+    border-color: var(--color-base-700) !important;
+    color: var(--color-base-100);
+}
+
+.dark #nav-sidebar .text-primary-600,
+.dark #nav-sidebar .text-primary-500 {
+    color: var(--color-base-100) !important;
+}
+
+/* Links in dashboard tables read as ink with a soft underline, not orange. */
+#content table a.text-primary-600 {
+    color: var(--color-base-800);
+    text-decoration: underline;
+    text-decoration-color: var(--color-base-300);
+    text-underline-offset: 3px;
+}
+
+#content table a.text-primary-600:hover {
+    text-decoration-color: currentColor;
+}
+
+.dark #content table a.text-primary-600 {
+    color: var(--color-base-100);
+    text-decoration-color: var(--color-base-700);
+}
+
+/* Change lists: plain ink links, underline only on hover. */
+#result_list a {
+    color: var(--color-base-800);
+    text-decoration: none;
+}
+
+#result_list tbody a:hover {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+
+.dark #result_list a {
+    color: var(--color-base-100);
+}
+
+/* Form panels are white cards on the cream canvas. */
+html:not(.dark) .form-rows.border {
+    background-color: #fff;
+}
+
+/* Login page: cream canvas, white hairline card, ink button. */
+html:not(.dark) body.login,
+html:not(.dark) body.login #page {
+    background-color: var(--color-base-100);
+}
+
+.ctb-login-card {
+    border-radius: 12px;
+}
+
+.ctb-login-title {
+    font-size: 30px;
+    line-height: 1.2;
+    font-weight: 400;
+    letter-spacing: -0.6px;
+}
+
+.login #login-form input[type=text],
+.login #login-form input[type=password] {
+    height: 44px;
+    background-color: #fff;
+    border-color: var(--color-base-300);
+}
+
+.dark.login #login-form input,
+.dark .login #login-form input {
+    background-color: var(--color-base-950);
+    border-color: var(--color-base-700);
+}
+
+.ctb-login-submit.bg-primary-600 {
+    height: 44px;
+    background-color: var(--color-base-800);
+    border-color: var(--color-base-800) !important;
+    color: var(--color-base-100);
+}
+
+.ctb-login-submit.bg-primary-600:hover {
+    background-color: var(--color-base-700);
+}
+
+.dark .ctb-login-submit.bg-primary-600 {
+    background-color: var(--color-base-100);
+    border-color: var(--color-base-100) !important;
+    color: var(--color-base-800);
+}
+
+@media (max-width: 639px) {
+    .ctb-display {
+        font-size: 28px !important;
+    }
 }

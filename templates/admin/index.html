@@ -12,7 +12,7 @@
 
     <div class="flex flex-col lg:flex-row gap-4 lg:items-center justify-between">
         <div>
-            <h1 class="font-semibold text-2xl text-important tracking-tight">
+            <h1 class="ctb-display font-semibold text-2xl text-important tracking-tight">
                 {% blocktranslate with name=request.user.get_short_name|default:request.user.get_username %}Welcome, {{ name }}{% endblocktranslate %}
             </h1>
             <p class="text-subtle mt-1">{% translate "Overview of the CTB company database." %}</p>
@@ -28,7 +28,7 @@
         {% for kpi in kpis %}
             {% component "unfold/components/card.html" with href=kpi.href footer=kpi.footer icon=kpi.icon %}
                 <p class="text-subtle text-sm">{{ kpi.title }}</p>
-                <p class="font-semibold text-3xl text-important tracking-tight mt-1">{{ kpi.value }}</p>
+                <p class="ctb-kpi font-semibold text-3xl text-important tracking-tight mt-1">{{ kpi.value }}</p>
             {% endcomponent %}
         {% endfor %}
     </div>

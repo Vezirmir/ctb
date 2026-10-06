@@ -45,3 +45,14 @@
         display: none !important;
     }
 }
+
+/* Phones: drop the large decorative icons in KPI cards so the numbers have room. */
+@media (max-width: 639px) {
+    #content .grow.relative.pl-8 {
+        padding-left: 0;
+    }
+
+    #content .grow.relative.pl-8 > .material-symbols-outlined.absolute {
+        display: none;
+    }
+}

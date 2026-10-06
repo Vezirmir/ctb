@@ -1,0 +1,59 @@
+{% extends 'unfold/layouts/unauthenticated.html' %}
+
+{% load i18n static unfold %}
+
+{% block extrastyle %}
+    {{ block.super }}
+    {{ form.media }}
+{% endblock %}
+
+{% block title %}
+    {{ title }} | {{ site_title }}
+{% endblock %}
+
+{% block content %}
+<div class="ctb-login flex flex-col gap-8">
+    <div class="flex items-center gap-3">
+        <span class="ctb-login-mark bg-primary-600 flex h-9 items-center justify-center rounded-default text-white w-9">
+            <span class="material-symbols-outlined text-[20px]">hub</span>
+        </span>
+        <span class="flex flex-col leading-tight">
+            <span class="font-semibold text-important">{{ site_title }}</span>
+            <span class="text-subtle text-xs">{% translate "B2B company database" %}</span>
+        </span>
+    </div>
+
+    <div class="ctb-login-card bg-white border border-base-200 overflow-hidden rounded-default p-8 dark:bg-base-900 dark:border-base-800">
+        <h1 class="ctb-login-title text-important mb-1">{% translate "Log in" %}</h1>
+        <p class="text-subtle mb-6">{% translate "Use the login and password you were given." %}</p>
+
+        {% include "unfold/helpers/messages.html" %}
+
+        {% if form.errors or form.non_field_errors %}
+            <div class="flex flex-col gap-4 mb-6 *:mb-0">
+                {% include "unfold/helpers/messages/errornote.html" with errors=form.errors %}
+                {% include "unfold/helpers/messages/error.html" with errors=form.non_field_errors %}
+                {% if user.is_authenticated %}
+                    {% blocktranslate trimmed asvar message %}
+                        You are authenticated as {{ username }}, but are not authorized to
+                        access this page. Would you like to login to a different account?
+                    {% endblocktranslate %}
+                    {% include "unfold/helpers/messages/error.html" with error=message %}
+                {% endif %}
+            </div>
+        {% endif %}
+
+        <form action="{{ app_path }}" method="post" id="login-form">
+            {% csrf_token %}
+            {% include "unfold/helpers/field.html" with field=form.username %}
+            {% include "unfold/helpers/field.html" with field=form.password %}
+
+            {% component "unfold/components/button.html" with submit=1 variant="primary" class="ctb-login-submit submit-row w-full mt-2" %}
+                {% translate 'Log in' %} <span class="material-symbols-outlined relative right-0 transition-all group-hover:-right-1 text-sm">arrow_forward</span>
+            {% endcomponent %}
+        </form>
+    </div>
+
+    <p class="text-subtle text-xs text-center">© CTB · Catch The Business</p>
+</div>
+{% endblock %}

@@ -1,0 +1,23 @@
+{% load i18n %}
+{% get_current_language as LANGUAGE_CODE %}
+{% get_available_languages as LANGUAGES %}
+
+{# Login page header: language choice on the left, light/dark switch on the right. #}
+<div class="absolute flex flex-row items-center justify-between left-0 m-4 right-0 top-0">
+    <form action="{% url 'set_language' %}" method="post" class="flex items-center gap-1 text-sm">
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{{ request.get_full_path }}">
+        {% for code, name in LANGUAGES %}
+            <button type="submit" name="language" value="{{ code }}"
+                    class="cursor-pointer px-2 py-1 rounded-default {% if code == LANGUAGE_CODE %}font-semibold text-important{% else %}text-subtle hover:text-important{% endif %}">
+                {{ code|upper }}
+            </button>
+        {% endfor %}
+    </form>
+
+    {% if not theme %}
+        <div class="ml-auto">
+            {% include "unfold/helpers/theme_switch_dropdown.html" %}
+        </div>
+    {% endif %}
+</div>

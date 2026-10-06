@@ -126,7 +126,7 @@ def _scale(lightness, chroma, hue):
     return {step: f"oklch({l}% {c} {hue})" for step, l, c in zip(steps, lightness, chroma)}
 
 
-# Colour themes. n8n is the default; override with the CTB_THEME environment variable.
+# Colour themes. cursor is the default; override with the CTB_THEME environment variable.
 THEMES = {
     # Blue on neutral grey, light or dark as the user prefers.
     "classic": {
@@ -150,27 +150,55 @@ THEMES = {
                               [.015, .03, .06, .1, .15, .185, .2, .19, .16, .13, .09], 10),
         },
     },
-    # Inspired by cursor.com: warm paper-like off-white, dark warm-brown text, orange accent.
+    # Modelled on cursor.com: warm cream canvas, white cards with hairlines and no shadows,
+    # warm near-black ink, regular-weight tight headings, Cursor Orange for main actions only.
+    # Light by default; users can switch to dark in the account menu.
     "cursor": {
-        "mode": "light",
-        "styles": ["directory/theme-cursor.css"],
+        "mode": None,
+        "scripts": ["directory/theme-default-light.js"],
+        "styles": [
+            "https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap",
+            "directory/theme-cursor.css",
+        ],
         "colors": {
-            "base": _scale([97.8, 95.6, 91.9, 85, 70, 56, 45, 37, 28, 25.5, 17],
-                           [.004, .005, .006, .008, .01, .012, .012, .012, .012, .013, .01], 95),
-            "primary": _scale([97, 94, 88, 80, 72, 66, 62, 54, 46, 39, 28],
-                              [.02, .04, .08, .13, .18, .21, .22, .19, .16, .13, .09], 41),
+            "base": {
+                "50": "#fafaf7",   # canvas soft
+                "100": "#f7f7f4",  # canvas
+                "200": "#e6e5e0",  # hairline
+                "300": "#cfcdc4",  # hairline strong
+                "400": "#a09c92",  # muted soft
+                "500": "#807d72",  # muted
+                "600": "#5a5852",  # body text
+                "700": "#3d3b35",
+                "800": "#26251e",  # ink
+                "900": "#1b1a15",
+                "950": "#14120b",
+            },
+            "primary": {
+                "50": "#fff4ed",
+                "100": "#ffe6d5",
+                "200": "#ffc9a8",
+                "300": "#ffa271",
+                "400": "#ff7238",
+                "500": "#ff5c12",
+                "600": "#f54e00",  # Cursor Orange
+                "700": "#d04200",  # pressed
+                "800": "#a5360a",
+                "900": "#852f0d",
+                "950": "#481404",
+            },
             "font": {
                 "subtle-light": "var(--color-base-500)",
                 "subtle-dark": "var(--color-base-400)",
-                "default-light": "var(--color-base-700)",
+                "default-light": "var(--color-base-600)",
                 "default-dark": "var(--color-base-300)",
-                "important-light": "var(--color-base-900)",
+                "important-light": "var(--color-base-800)",
                 "important-dark": "var(--color-base-100)",
             },
         },
     },
 }
-THEME = THEMES.get(os.environ.get("CTB_THEME", "n8n"), THEMES["n8n"])
+THEME = THEMES.get(os.environ.get("CTB_THEME", "cursor"), THEMES["cursor"])
 
 UNFOLD = {
     "SITE_TITLE": "CTB",
@@ -185,7 +213,8 @@ UNFOLD = {
     "SCRIPTS": [(lambda request, path=path: static(path)) for path in THEME.get("scripts", [])],
     "DASHBOARD_CALLBACK": "directory.dashboard.dashboard_callback",
     "STYLES": [lambda request: static("directory/admin.css")] + [
-        (lambda request, path=path: static(path)) for path in THEME["styles"]
+        (lambda request, path=path: path if path.startswith("https://") else static(path))
+        for path in THEME["styles"]
     ],
     "COLORS": THEME["colors"],
     "SIDEBAR": {

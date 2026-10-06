@@ -31,7 +31,7 @@ COUNTRIES = [
 # (English, Turkish, Russian spellings)
 INDUSTRIES = [
     ("Automotive", "Otomotiv", ["Автомобильная", "Автомобильная промышленность", "Автопром"]),
-    ("Home appliances", "Ev aletleri", ["Бытовая техника"]),
+    ("Home appliances", "Beyaz Eşya", ["Бытовая техника"]),
     ("Railway", "Demiryolu", ["Железнодорожная", "ЖД"]),
     ("Agricultural machinery", "Tarım makineleri", ["Сельхозтехника", "Сельскохозяйственная техника"]),
     ("Agriculture", "Tarım", ["Сельское хозяйство", "Сельскохозяйственная"]),

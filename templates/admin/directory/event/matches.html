@@ -1,0 +1,61 @@
+{% extends "admin/base_site.html" %}
+{% load i18n unfold %}
+
+{% block breadcrumbs %}{% endblock %}
+
+{% block content %}
+{% include "admin/directory/event/_nav.html" with matches_variant="primary" %}
+
+{% if not suggestions %}
+    {% component "unfold/components/card.html" with title=_("No new pairs found") title_icon="info" %}
+        <div class="flex flex-col gap-2">
+            <p>{% blocktranslate trimmed count n=participant_count %}The event has {{ n }} participant.{% plural %}The event has {{ n }} participants.{% endblocktranslate %}</p>
+            <p>{% translate "Pairs are suggested when a buyer meets a seller (or “buyer and seller”) and their industries match. Check the participants’ roles and the industries they want to meet." %}</p>
+        </div>
+    {% endcomponent %}
+{% else %}
+<form method="post">
+    {% csrf_token %}
+    {% component "unfold/components/card.html" with title=_("Suggested pairs") title_icon="join_inner" %}
+        <div class="flex flex-col lg:flex-row gap-4 lg:items-center justify-between mb-4">
+            <p class="text-subtle">
+                {% blocktranslate trimmed with total=suggestions|length checked=preselected|length slots=slot_count %}
+                    {{ total }} possible pairs, best first. {{ checked }} are preselected so that every company fits into the {{ slots }} time slots.
+                {% endblocktranslate %}
+            </p>
+            {% component "unfold/components/button.html" with submit=1 icon="add" %}{% translate "Create selected meetings" %}{% endcomponent %}
+        </div>
+        <div class="overflow-x-auto -mx-6 -mb-6">
+        <table class="w-full border-separate border-spacing-none">
+            <thead>
+                <tr class="bg-base-50 dark:bg-base-900">
+                    <th class="px-3 py-2 text-left border-b border-base-200 dark:border-base-800 first:pl-6"><input type="checkbox" checked onclick="document.querySelectorAll('input[name=pair]').forEach(c => c.checked = this.checked)"></th>
+                    <th class="px-3 py-2 text-left border-b border-base-200 dark:border-base-800 font-semibold text-important">{% translate "First company" %}</th>
+                    <th class="px-3 py-2 text-left border-b border-base-200 dark:border-base-800 font-semibold text-important">{% translate "Second company" %}</th>
+                    <th class="px-3 py-2 text-left border-b border-base-200 dark:border-base-800 font-semibold text-important">{% translate "Score" %}</th>
+                    <th class="px-3 py-2 text-left border-b border-base-200 dark:border-base-800 font-semibold text-important last:pr-6">{% translate "Why" %}</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for s in suggestions %}
+                <tr class="{% cycle '' 'bg-base-50 dark:bg-white/[.02]' %}">
+                    <td class="px-3 py-2 border-b border-base-200 dark:border-base-800 first:pl-6"><input type="checkbox" name="pair" value="{{ s.key }}" {% if s.key in preselected %}checked{% endif %}></td>
+                    <td class="px-3 py-2 border-b border-base-200 dark:border-base-800">
+                        <span class="text-important">{{ s.a.company.name }}</span><br>
+                        <span class="text-subtle text-xs">{{ s.a.company.country|default:"—" }}{% if s.a.role %} · {{ s.a.get_role_display }}{% endif %}</span>
+                    </td>
+                    <td class="px-3 py-2 border-b border-base-200 dark:border-base-800">
+                        <span class="text-important">{{ s.b.company.name }}</span><br>
+                        <span class="text-subtle text-xs">{{ s.b.company.country|default:"—" }}{% if s.b.role %} · {{ s.b.get_role_display }}{% endif %}</span>
+                    </td>
+                    <td class="px-3 py-2 border-b border-base-200 dark:border-base-800">{% include "unfold/helpers/label.html" with text=s.score type="primary" %}</td>
+                    <td class="px-3 py-2 border-b border-base-200 dark:border-base-800 text-sm last:pr-6">{{ s.reasons|join:"; " }}</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        </div>
+    {% endcomponent %}
+</form>
+{% endif %}
+{% endblock %}

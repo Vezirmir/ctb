@@ -1,0 +1,32 @@
+{% extends "admin/base_site.html" %}
+{% load i18n unfold %}
+
+{% block breadcrumbs %}{% endblock %}
+
+{% block content %}
+<div class="grid lg:grid-cols-3 gap-6">
+    <div class="lg:col-span-2">
+    {% component "unfold/components/card.html" with title=title title_icon="event_available" %}
+        <form method="post">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="add_to_event">
+            {% for company in companies %}<input type="hidden" name="{{ action_checkbox_name }}" value="{{ company.pk }}">{% endfor %}
+            {% for field in form %}
+                {% include "unfold/helpers/field.html" with field=field %}
+            {% endfor %}
+            {% if not form.fields.event.queryset.exists %}
+                <p class="text-red-600 mb-4">{% translate "There are no events yet. Create an event first." %}</p>
+            {% endif %}
+            {% component "unfold/components/button.html" with submit=1 name="apply" value="1" icon="add" %}{% translate "Add to event" %}{% endcomponent %}
+        </form>
+    {% endcomponent %}
+    </div>
+    {% component "unfold/components/card.html" with title=_("Selected companies") title_icon="apartment" %}
+        <p class="text-important mb-2">{{ companies|length }}</p>
+        <ul class="flex flex-col gap-1 text-sm">
+            {% for company in companies|slice:":30" %}<li>{{ company.name }}</li>{% endfor %}
+            {% if companies|length > 30 %}<li class="text-subtle">…</li>{% endif %}
+        </ul>
+    {% endcomponent %}
+</div>
+{% endblock %}

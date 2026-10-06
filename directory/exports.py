@@ -56,3 +56,54 @@ def companies_to_xlsx_response(queryset):
     response["Content-Disposition"] = f'attachment; filename="{filename}"'
     wb.save(response)
     return response
+
+
+def _local(dt):
+    return timezone.localtime(dt) if dt else None
+
+
+def schedule_to_xlsx_response(event):
+    from .matchmaking import company_agenda, schedule_rows
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = _("Schedule")[:31]
+    columns = [(_("Date"), 12), (_("Time"), 8), (_("Table"), 7), (_("First company"), 34),
+               (_("Country"), 14), (_("Second company"), 34), (_("Country"), 14), (_("Status"), 14)]
+    ws.append([title for title, _width in columns])
+    for index, (_title, width) in enumerate(columns, start=1):
+        ws.column_dimensions[get_column_letter(index)].width = width
+    for m in schedule_rows(event):
+        at = _local(m.scheduled_at)
+        ws.append([
+            at.strftime("%d.%m.%Y") if at else "", at.strftime("%H:%M") if at else "",
+            m.table or "", m.company_a.name, str(m.company_a.country or ""),
+            m.company_b.name, str(m.company_b.country or ""), m.get_status_display(),
+        ])
+    for cell in ws[1]:
+        cell.font = Font(bold=True)
+    ws.freeze_panes = "A2"
+    ws.auto_filter.ref = ws.dimensions
+
+    agenda = wb.create_sheet(_("By company")[:31])
+    for index, width in enumerate((12, 8, 7, 36, 16, 40), start=1):
+        agenda.column_dimensions[get_column_letter(index)].width = width
+    for company, items in company_agenda(event).items():
+        agenda.append([company.name])
+        agenda[agenda.max_row][0].font = Font(bold=True, size=13)
+        agenda.append([_("Date"), _("Time"), _("Table"), _("Partner"), _("Country"), _("E-mails")])
+        for cell in agenda[agenda.max_row]:
+            cell.font = Font(bold=True)
+        for m, partner in items:
+            at = _local(m.scheduled_at)
+            agenda.append([
+                at.strftime("%d.%m.%Y") if at else "", at.strftime("%H:%M") if at else "",
+                m.table or "", partner.name, str(partner.country or ""),
+                ", ".join(partner.emails.values_list("email", flat=True)[:3]),
+            ])
+        agenda.append([])
+
+    response = HttpResponse(content_type=XLSX_CONTENT_TYPE)
+    response["Content-Disposition"] = f'attachment; filename="schedule_{event.pk}.xlsx"'
+    wb.save(response)
+    return response

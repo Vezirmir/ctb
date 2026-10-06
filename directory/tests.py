@@ -6,7 +6,7 @@ from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 from django.urls import reverse
-from django.utils import translation
+from django.utils import timezone, translation
 from openpyxl import Workbook, load_workbook
 
 from .importer import (
@@ -143,6 +143,7 @@ class ImportTests(TestCase):
         beta = Company.objects.get(name="Beta Home")
         self.assertEqual(beta.country.iso_code, "RU")
         self.assertEqual(str(beta.industries.get()), "Home appliances")
+        self.assertEqual(beta.industries.get().name_tr, "Beyaz Eşya")
 
         loose = Email.objects.get(company=None)
         self.assertEqual((loose.email, loose.group, loose.sent_count), ("info@other.kz", "Другие страны", 4))
@@ -287,3 +288,121 @@ class CsrfFailureTests(TestCase):
                                {"username": "admin", "password": "pw", "csrfmiddlewaretoken": token},
                                **headers)
         self.assertEqual(response.status_code, 302)
+
+
+class MatchmakingTests(TestCase):
+    def setUp(self):
+        translation.activate("en")
+        from .models import Event, Participation
+        self.ru = Country.objects.create(name_en="Russia", iso_code="RU")
+        self.tr = Country.objects.create(name_en="Türkiye", iso_code="TR")
+        self.auto = Industry.objects.create(name_en="Automotive")
+        self.home = Industry.objects.create(name_en="Home appliances")
+        self.event = Event.objects.create(
+            name="Bursa 2026", start_date=date(2026, 11, 3), day_start="10:00", day_end="12:00",
+            break_start="11:00", break_end="11:30", meeting_minutes=30)
+        self.event.refresh_from_db()
+
+        def company(name, country, industry, role):
+            c = Company.objects.create(name=name, country=country)
+            c.industries.add(industry)
+            return Participation.objects.create(event=self.event, company=c, role=role)
+
+        self.buyer1 = company("Buyer Auto 1", self.ru, self.auto, "buyer")
+        self.buyer2 = company("Buyer Auto 2", self.ru, self.auto, "buyer")
+        self.seller1 = company("Seller Auto 1", self.tr, self.auto, "seller")
+        self.seller2 = company("Seller Auto 2", self.tr, self.auto, "seller")
+        self.seller_home = company("Seller Home", self.tr, self.home, "seller")
+
+    def test_slots_skip_break(self):
+        times = [timezone.localtime(s).strftime("%H:%M") for s in self.event.slots()]
+        self.assertEqual(times, ["10:00", "10:30", "11:30"])
+
+    def test_suggest_pairs_buyers_with_sellers_of_same_industry(self):
+        from .matchmaking import suggest
+        pairs = {frozenset((s.a.company.name, s.b.company.name)) for s in suggest(self.event)}
+        self.assertEqual(pairs, {
+            frozenset(("Buyer Auto 1", "Seller Auto 1")), frozenset(("Buyer Auto 1", "Seller Auto 2")),
+            frozenset(("Buyer Auto 2", "Seller Auto 1")), frozenset(("Buyer Auto 2", "Seller Auto 2")),
+        })
+
+    def test_wanted_industries_and_countries(self):
+        from .matchmaking import suggest
+        self.buyer1.wanted_industries.add(self.home)
+        pairs = {frozenset((s.a.company.name, s.b.company.name)) for s in suggest(self.event)}
+        self.assertIn(frozenset(("Buyer Auto 1", "Seller Home")), pairs)
+        self.assertNotIn(frozenset(("Buyer Auto 1", "Seller Auto 1")), pairs)
+        self.buyer2.wanted_countries.add(self.ru)  # nobody from Russia sells
+        pairs = {frozenset((s.a.company.name, s.b.company.name)) for s in suggest(self.event)}
+        self.assertFalse(any("Buyer Auto 2" in p for p in pairs))
+
+    def test_declined_participants_are_ignored(self):
+        from .matchmaking import suggest
+        self.seller1.status = "declined"
+        self.seller1.save()
+        self.assertFalse(any("Seller Auto 1" in (s.a.company.name, s.b.company.name)
+                             for s in suggest(self.event)))
+
+    def test_create_schedule_and_no_double_booking(self):
+        from .matchmaking import build_schedule, create_meetings, preselect, suggest
+        suggestions = suggest(self.event)
+        keys = preselect(self.event, suggestions)
+        self.assertEqual(len(keys), 4)
+        self.assertEqual(create_meetings(self.event, keys), 4)
+        self.assertEqual(create_meetings(self.event, keys), 0)  # no duplicates
+        self.assertEqual(suggest(self.event), [])
+        report = build_schedule(self.event)
+        self.assertEqual((report.scheduled, report.unscheduled), (4, []))
+        seen = set()
+        for m in self.event.meetings.all():
+            for company_id in (m.company_a_id, m.company_b_id):
+                self.assertNotIn((company_id, m.scheduled_at), seen)
+                seen.add((company_id, m.scheduled_at))
+
+    def test_tables_limit(self):
+        from .matchmaking import build_schedule, create_meetings, preselect, suggest
+        self.event.tables = 1
+        self.event.save()
+        create_meetings(self.event, preselect(self.event, suggest(self.event)))
+        report = build_schedule(self.event)
+        self.assertEqual(report.scheduled, 3)  # one table x three slots
+        self.assertEqual(len(report.unscheduled), 1)
+        self.assertEqual(set(self.event.meetings.exclude(table=None).values_list("table", flat=True)), {1})
+
+    def test_admin_pages_and_export(self):
+        user = get_user_model().objects.create_superuser("admin", "a@example.com", "pw")
+        self.client.force_login(user)
+        matches = reverse("admin:directory_event_matches", args=[self.event.pk])
+        schedule = reverse("admin:directory_event_schedule", args=[self.event.pk])
+        for language in ("en", "tr"):
+            self.client.cookies["django_language"] = language
+            self.assertEqual(self.client.get(matches).status_code, 200)
+            self.assertEqual(self.client.get(schedule).status_code, 200)
+            self.assertEqual(self.client.get(reverse("admin:directory_participation_changelist")).status_code, 200)
+            self.assertEqual(self.client.get(reverse("admin:directory_event_change", args=[self.event.pk])).status_code, 200)
+        response = self.client.post(matches, {"pair": [f"{self.buyer1.company_id}-{self.seller1.company_id}",
+                                                        "bad", f"{self.buyer1.company_id}-999999"]})
+        self.assertRedirects(response, schedule, fetch_redirect_response=False)
+        self.assertEqual(self.event.meetings.count(), 1)
+        self.client.post(schedule, {})
+        self.assertIsNotNone(self.event.meetings.get().scheduled_at)
+        self.assertEqual(self.client.get(schedule).status_code, 200)
+        ws = load_workbook(io.BytesIO(self.client.get(schedule + "?format=xlsx").content)).worksheets
+        self.assertEqual(ws[0]["D2"].value, "Buyer Auto 1")
+        self.client.post(schedule, {"clear": "1"})
+        self.assertIsNone(self.event.meetings.get().scheduled_at)
+
+    def test_add_companies_to_event_action(self):
+        user = get_user_model().objects.create_superuser("admin", "a@example.com", "pw")
+        self.client.force_login(user)
+        new = Company.objects.create(name="Fresh", country=self.tr)
+        url = reverse("admin:directory_company_changelist")
+        ids = [new.pk, self.buyer1.company_id]
+        page = self.client.post(url, {"action": "add_to_event", "_selected_action": ids})
+        self.assertContains(page, "Fresh")
+        response = self.client.post(url, {"action": "add_to_event", "_selected_action": ids, "apply": "1",
+                                          "event": self.event.pk, "role": "seller", "status": "invited"})
+        self.assertEqual(response.status_code, 302)
+        p = self.event.participations.get(company=new)
+        self.assertEqual((p.role, p.status), ("seller", "invited"))
+        self.assertEqual(self.event.participations.get(company=self.buyer1.company).role, "buyer")

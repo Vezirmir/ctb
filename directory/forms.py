@@ -4,7 +4,7 @@ from django import forms
 from django.utils.translation import gettext_lazy as _
 from unfold.widgets import UnfoldAdminFileFieldWidget, UnfoldAdminSelectWidget
 
-from .models import Country, Industry
+from .models import Country, Event, Industry, Participation
 
 
 class ImportForm(forms.Form):
@@ -32,3 +32,14 @@ class ImportForm(forms.Form):
         if PurePosixPath(upload.name).suffix.lower() not in {".zip", ".xlsx", ".xlsm"}:
             raise forms.ValidationError(_("Upload a .zip or .xlsx file."))
         return upload
+
+
+class AddToEventForm(forms.Form):
+    event = forms.ModelChoiceField(Event.objects.all(), label=_("Event"),
+                                   widget=UnfoldAdminSelectWidget)
+    role = forms.ChoiceField(label=_("Role"), required=False,
+                             choices=[("", "—")] + list(Participation.Role.choices),
+                             widget=UnfoldAdminSelectWidget)
+    status = forms.ChoiceField(label=_("Status"), choices=Participation.Status.choices,
+                               initial=Participation.Status.INVITED,
+                               widget=UnfoldAdminSelectWidget)

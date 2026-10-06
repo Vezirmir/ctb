@@ -1,5 +1,9 @@
+import datetime
+
 from django.core.exceptions import ValidationError
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
+from django.utils import timezone
 from django.utils.translation import get_language
 from django.utils.translation import gettext_lazy as _
 
@@ -216,6 +220,20 @@ class Event(models.Model):
     )
     city = models.CharField(_("city"), max_length=120, blank=True)
     description = models.TextField(_("description"), blank=True)
+    day_start = models.TimeField(_("meetings start at"), default=datetime.time(10, 0))
+    day_end = models.TimeField(_("meetings end at"), default=datetime.time(17, 0))
+    break_start = models.TimeField(_("break from"), null=True, blank=True,
+                                   default=datetime.time(13, 0))
+    break_end = models.TimeField(_("break until"), null=True, blank=True,
+                                 default=datetime.time(14, 0))
+    meeting_minutes = models.PositiveSmallIntegerField(
+        _("meeting length (minutes)"), default=30,
+        validators=[MinValueValidator(5), MaxValueValidator(240)],
+    )
+    tables = models.PositiveSmallIntegerField(
+        _("number of tables"), null=True, blank=True,
+        help_text=_("Meetings held at the same time. Leave empty for no limit."),
+    )
 
     class Meta:
         ordering = ["-start_date", "name"]
@@ -228,6 +246,38 @@ class Event(models.Model):
     def clean(self):
         if self.start_date and self.end_date and self.end_date < self.start_date:
             raise ValidationError({"end_date": _("End date cannot be before start date.")})
+        if self.day_start and self.day_end and self.day_end <= self.day_start:
+            raise ValidationError({"day_end": _("Meetings must end after they start.")})
+        if bool(self.break_start) != bool(self.break_end) or (
+                self.break_start and self.break_end <= self.break_start):
+            raise ValidationError({"break_end": _("Enter both break times, the end after the start.")})
+
+    @property
+    def days(self):
+        if not self.start_date:
+            return []
+        last = self.end_date or self.start_date
+        return [self.start_date + datetime.timedelta(days=i)
+                for i in range((last - self.start_date).days + 1)]
+
+    def slots(self):
+        """Start times of all meeting slots, as aware datetimes, in order."""
+        step = datetime.timedelta(minutes=self.meeting_minutes)
+        tz = timezone.get_current_timezone()
+        result = []
+        for day in self.days:
+            current = datetime.datetime.combine(day, self.day_start)
+            end = datetime.datetime.combine(day, self.day_end)
+            while current + step <= end:
+                slot_end = current + step
+                in_break = self.break_start and self.break_end and (
+                    current.time() < self.break_end and slot_end.time() > self.break_start)
+                if in_break:
+                    current = datetime.datetime.combine(day, self.break_end)
+                    continue
+                result.append(timezone.make_aware(current, tz))
+                current = slot_end
+        return result
 
 
 class Participation(models.Model):
@@ -243,7 +293,26 @@ class Participation(models.Model):
     company = models.ForeignKey(
         Company, verbose_name=_("company"), on_delete=models.CASCADE, related_name="participations",
     )
+    class Status(models.TextChoices):
+        INVITED = "invited", _("Invited")
+        CONFIRMED = "confirmed", _("Confirmed")
+        DECLINED = "declined", _("Declined")
+        ATTENDED = "attended", _("Attended")
+
     role = models.CharField(_("role"), max_length=10, choices=Role.choices, blank=True)
+    status = models.CharField(_("status"), max_length=10, choices=Status.choices,
+                              default=Status.CONFIRMED)
+    wanted_industries = models.ManyToManyField(
+        Industry, verbose_name=_("wants to meet industries"), blank=True, related_name="+",
+        help_text=_("Empty: companies of the same industries."),
+    )
+    wanted_countries = models.ManyToManyField(
+        Country, verbose_name=_("wants to meet countries"), blank=True, related_name="+",
+        help_text=_("Empty: any country."),
+    )
+    max_meetings = models.PositiveSmallIntegerField(
+        _("max. meetings"), null=True, blank=True, help_text=_("Empty: no limit."),
+    )
     interests = models.TextField(
         _("interests"), blank=True,
         help_text=_("What the company is looking for or offering at this event."),
@@ -280,6 +349,7 @@ class Meeting(models.Model):
         related_name="meetings_as_b",
     )
     scheduled_at = models.DateTimeField(_("scheduled at"), null=True, blank=True)
+    table = models.PositiveSmallIntegerField(_("table"), null=True, blank=True)
     status = models.CharField(
         _("status"), max_length=10, choices=Status.choices, default=Status.PLANNED,
     )

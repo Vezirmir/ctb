@@ -170,6 +170,8 @@ UNFOLD = {
                 "title": _("Events"),
                 "items": [
                     {"title": _("Events"), "icon": "event", "link": _changelist("event")},
+                    {"title": _("Participants"), "icon": "groups",
+                     "link": _changelist("participation")},
                     {"title": _("Meetings"), "icon": "handshake", "link": _changelist("meeting")},
                 ],
             },

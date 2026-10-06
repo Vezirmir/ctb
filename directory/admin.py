@@ -7,20 +7,24 @@ from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.auth.models import Group, User
 from django.db import models
 from django.db.models import Count, Exists, OuterRef
-from django.shortcuts import redirect
+from django.shortcuts import get_object_or_404, redirect
 from django.template.response import TemplateResponse
 from django.urls import reverse
+from django.utils import timezone
 from django.utils.html import format_html, format_html_join
 from django.utils.translation import gettext_lazy as _
 from unfold.admin import ModelAdmin, TabularInline
 from unfold.contrib.filters.admin import ChoicesDropdownFilter, RelatedDropdownFilter
 from unfold.decorators import action, display
 from unfold.forms import AdminPasswordChangeForm, UserChangeForm, UserCreationForm
-from unfold.widgets import UnfoldAdminTextareaWidget
+from unfold.widgets import UnfoldAdminSingleTimeWidget, UnfoldAdminTextareaWidget
 
-from .exports import companies_to_xlsx_response
-from .forms import ImportForm
+from .exports import companies_to_xlsx_response, schedule_to_xlsx_response
+from .forms import AddToEventForm, ImportForm
 from .importer import Importer, read_zip
+from .matchmaking import (
+    build_schedule, clear_schedule, create_meetings, preselect, schedule_rows, suggest,
+)
 from .models import (
     Company, Contact, Country, Email, Event, Industry, Meeting, Participation, Tag,
 )
@@ -163,7 +167,7 @@ class CompanyAdmin(ModelAdmin):
     ]
     autocomplete_fields = ["country", "industries", "tags"]
     inlines = [EmailInline, ContactInline, CompanyParticipationInline]
-    actions = ["export_xlsx"]
+    actions = ["export_xlsx", "add_to_event"]
     actions_list = ["import_excel"]
     list_per_page = 50
     readonly_fields = ["created_at", "updated_at"]
@@ -221,6 +225,33 @@ class CompanyAdmin(ModelAdmin):
     @admin.action(description=_("Export selected companies to Excel"))
     def export_xlsx(self, request, queryset):
         return companies_to_xlsx_response(queryset)
+
+    @admin.action(description=_("Add selected companies to an event"), permissions=["change"])
+    def add_to_event(self, request, queryset):
+        form = AddToEventForm(request.POST if "apply" in request.POST else None)
+        if form.is_valid():
+            event = form.cleaned_data["event"]
+            created = 0
+            for company in queryset:
+                _obj, was_created = Participation.objects.get_or_create(
+                    event=event, company=company,
+                    defaults={"role": form.cleaned_data["role"],
+                              "status": form.cleaned_data["status"]},
+                )
+                created += was_created
+            messages.success(request, _(
+                "%(created)d companies added to “%(event)s”, %(skipped)d were already there.") % {
+                "created": created, "event": event, "skipped": queryset.count() - created})
+            return redirect("admin:directory_event_change", event.pk)
+        context = {
+            **self.admin_site.each_context(request),
+            "opts": self.model._meta,
+            "title": _("Add selected companies to an event"),
+            "form": form,
+            "companies": queryset,
+            "action_checkbox_name": admin.helpers.ACTION_CHECKBOX_NAME,
+        }
+        return TemplateResponse(request, "admin/directory/company/add_to_event.html", context)
 
     @action(description=_("Import from Excel"), url_path="import-excel", icon="upload_file",
             permissions=["add"])
@@ -309,52 +340,212 @@ class ContactAdmin(ModelAdmin):
 
 # --------------------------------------------------------------------------- events
 
+ROLE_LABELS = {
+    Participation.Role.BUYER: "info",
+    Participation.Role.SELLER: "success",
+    Participation.Role.BOTH: "primary",
+}
+PARTICIPATION_STATUS_LABELS = {
+    Participation.Status.INVITED: "warning",
+    Participation.Status.CONFIRMED: "info",
+    Participation.Status.DECLINED: "danger",
+    Participation.Status.ATTENDED: "success",
+}
+
+
 class EventParticipationInline(TabularInline):
     model = Participation
     extra = 0
     tab = True
-    fields = ["company", "role", "interests"]
+    fields = ["company", "role", "status", "max_meetings"]
     autocomplete_fields = ["company"]
+    show_change_link = True
 
 
 class EventMeetingInline(TabularInline):
     model = Meeting
     extra = 0
     tab = True
-    fields = ["company_a", "company_b", "scheduled_at", "status", "outcome"]
+    fields = ["company_a", "company_b", "scheduled_at", "table", "status", "outcome"]
     autocomplete_fields = ["company_a", "company_b"]
 
 
 @admin.register(Event)
 class EventAdmin(ModelAdmin):
-    list_display = ["name", "start_date", "end_date", "country", "city", "participant_count"]
+    list_display = ["name", "start_date", "end_date", "country", "city", "participant_count",
+                    "meeting_count"]
     list_filter = [("country", RelatedDropdownFilter), "start_date"]
     search_fields = ["name", "city"]
     autocomplete_fields = ["country"]
     date_hierarchy = "start_date"
     inlines = [EventParticipationInline, EventMeetingInline]
+    actions_detail = ["matches", "schedule"]
+    formfield_overrides = {
+        models.TimeField: {"widget": UnfoldAdminSingleTimeWidget(format="%H:%M")},
+        models.TextField: {"widget": UnfoldAdminTextareaWidget(attrs={"rows": 3})},
+    }
+    fieldsets = [
+        (_("Event"), {"fields": ["name", ("start_date", "end_date"), ("country", "city"),
+                                 "description"]}),
+        (_("Meeting schedule"), {"fields": [("day_start", "day_end"), ("break_start", "break_end"),
+                                            ("meeting_minutes", "tables")]}),
+    ]
 
     def get_queryset(self, request):
         return (
             super().get_queryset(request)
             .select_related("country")
-            .annotate(_participant_count=Count("participations", distinct=True))
+            .annotate(
+                _participant_count=Count("participations", distinct=True),
+                _meeting_count=Count("meetings", distinct=True),
+            )
         )
 
     @display(description=_("participants"), ordering="_participant_count")
     def participant_count(self, obj):
         return obj._participant_count
 
+    @display(description=_("meetings"), ordering="_meeting_count")
+    def meeting_count(self, obj):
+        return obj._meeting_count
+
+    def _event_context(self, request, event, title):
+        return {
+            **self.admin_site.each_context(request),
+            "opts": self.model._meta,
+            "original": event,
+            "event": event,
+            "title": title,
+            "change_url": reverse("admin:directory_event_change", args=[event.pk]),
+            "matches_url": reverse("admin:directory_event_matches", args=[event.pk]),
+            "schedule_url": reverse("admin:directory_event_schedule", args=[event.pk]),
+        }
+
+    @action(description=_("Suggest matches"), url_path="matches", icon="join_inner",
+            permissions=["change"])
+    def matches(self, request, object_id):
+        event = get_object_or_404(Event, pk=object_id)
+        if request.method == "POST":
+            created = create_meetings(event, request.POST.getlist("pair"))
+            messages.success(request, _("Meetings created: %(n)d.") % {"n": created})
+            return redirect("admin:directory_event_schedule", event.pk)
+        suggestions = suggest(event)
+        context = self._event_context(request, event, _("Suggest matches"))
+        context.update({
+            "suggestions": suggestions,
+            "preselected": preselect(event, suggestions),
+            "participant_count": event.participations.count(),
+            "slot_count": len(event.slots()),
+        })
+        return TemplateResponse(request, "admin/directory/event/matches.html", context)
+
+    @action(description=_("Schedule"), url_path="schedule", icon="calendar_month",
+            permissions=["change"])
+    def schedule(self, request, object_id):
+        event = get_object_or_404(Event, pk=object_id)
+        if request.GET.get("format") == "xlsx":
+            return schedule_to_xlsx_response(event)
+        if request.method == "POST":
+            if "clear" in request.POST:
+                cleared = clear_schedule(event)
+                messages.info(request, _("Times removed from %(n)d meetings.") % {"n": cleared})
+            else:
+                report = build_schedule(event)
+                messages.success(request, _("Meetings scheduled: %(n)d.") % {"n": report.scheduled})
+                if report.unscheduled:
+                    messages.warning(request, _(
+                        "%(n)d meetings did not fit into the time slots. Add a day, tables or "
+                        "shorter meetings, or remove some meetings.") % {"n": len(report.unscheduled)})
+            return redirect("admin:directory_event_schedule", event.pk)
+
+        days = {}
+        unscheduled = []
+        for m in schedule_rows(event):
+            if m.scheduled_at:
+                days.setdefault(timezone.localtime(m.scheduled_at).date(), []).append(m)
+            else:
+                unscheduled.append(m)
+        context = self._event_context(request, event, _("Schedule"))
+        context.update({
+            "days": days,
+            "unscheduled": unscheduled,
+            "slot_count": len(event.slots()),
+            "status_labels": STATUS_LABELS,
+        })
+        return TemplateResponse(request, "admin/directory/event/schedule.html", context)
+
+
+@admin.register(Participation)
+class ParticipationAdmin(ModelAdmin):
+    list_display = ["company", "event", "role_label", "status_label", "wanted", "max_meetings"]
+    list_filter = [
+        ("event", RelatedDropdownFilter),
+        ("role", ChoicesDropdownFilter),
+        ("status", ChoicesDropdownFilter),
+        ("company__country", RelatedDropdownFilter),
+    ]
+    list_filter_submit = True
+    list_editable = ["max_meetings"]
+    search_fields = ["company__name", "event__name", "interests"]
+    autocomplete_fields = ["event", "company", "wanted_industries", "wanted_countries"]
+    list_select_related = ["company", "event"]
+    actions = ["mark_confirmed", "mark_declined", "mark_attended"]
+    fields = ["event", "company", ("role", "status"), "wanted_industries", "wanted_countries",
+              "max_meetings", "interests"]
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).prefetch_related("wanted_industries",
+                                                              "wanted_countries")
+
+    @display(description=_("role"), label=ROLE_LABELS, ordering="role")
+    def role_label(self, obj):
+        return (obj.role, obj.get_role_display()) if obj.role else None
+
+    @display(description=_("status"), label=PARTICIPATION_STATUS_LABELS, ordering="status")
+    def status_label(self, obj):
+        return obj.status, obj.get_status_display()
+
+    @display(description=_("wants to meet"))
+    def wanted(self, obj):
+        parts = [str(x) for x in obj.wanted_industries.all()] + [
+            str(x) for x in obj.wanted_countries.all()]
+        return ", ".join(parts) or "—"
+
+    def _set_status(self, request, queryset, status):
+        updated = queryset.update(status=status)
+        messages.success(request, _("Updated: %(n)d.") % {"n": updated})
+
+    @admin.action(description=_("Mark as confirmed"))
+    def mark_confirmed(self, request, queryset):
+        self._set_status(request, queryset, Participation.Status.CONFIRMED)
+
+    @admin.action(description=_("Mark as declined"))
+    def mark_declined(self, request, queryset):
+        self._set_status(request, queryset, Participation.Status.DECLINED)
+
+    @admin.action(description=_("Mark as attended"))
+    def mark_attended(self, request, queryset):
+        self._set_status(request, queryset, Participation.Status.ATTENDED)
+
 
 @admin.register(Meeting)
 class MeetingAdmin(ModelAdmin):
-    list_display = ["__str__", "event", "scheduled_at", "status_label"]
+    list_display = ["__str__", "event", "scheduled_at", "table", "status_label"]
     list_filter = [("status", ChoicesDropdownFilter), ("event", RelatedDropdownFilter)]
     list_filter_submit = True
     search_fields = ["company_a__name", "company_b__name", "outcome"]
     autocomplete_fields = ["event", "company_a", "company_b"]
     list_select_related = ["event", "company_a", "company_b"]
+    actions = ["mark_held", "mark_cancelled"]
 
     @display(description=_("status"), label=STATUS_LABELS, ordering="status")
     def status_label(self, obj):
         return obj.status, obj.get_status_display()
+
+    @admin.action(description=_("Mark as held"))
+    def mark_held(self, request, queryset):
+        queryset.update(status=Meeting.Status.HELD)
+
+    @admin.action(description=_("Mark as cancelled"))
+    def mark_cancelled(self, request, queryset):
+        queryset.update(status=Meeting.Status.CANCELLED)

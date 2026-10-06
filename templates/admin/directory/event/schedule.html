@@ -1,0 +1,73 @@
+{% extends "admin/base_site.html" %}
+{% load i18n unfold %}
+
+{% block breadcrumbs %}{% endblock %}
+
+{% block content %}
+{% include "admin/directory/event/_nav.html" with schedule_variant="primary" %}
+
+<div class="flex flex-col lg:flex-row gap-4 lg:items-center justify-between mb-6">
+    <p class="text-subtle">
+        {% if slot_count %}
+            {% blocktranslate trimmed with slots=slot_count minutes=event.meeting_minutes %}
+                {{ slots }} time slots of {{ minutes }} minutes.
+            {% endblocktranslate %}
+            {% if event.tables %}{% blocktranslate trimmed with tables=event.tables %}{{ tables }} tables.{% endblocktranslate %}{% endif %}
+        {% else %}
+            {% translate "Set the event dates and meeting hours to build a schedule." %}
+        {% endif %}
+    </p>
+    <form method="post" class="flex flex-wrap gap-2">
+        {% csrf_token %}
+        {% component "unfold/components/button.html" with submit=1 icon="auto_schedule" %}{% translate "Build schedule" %}{% endcomponent %}
+        {% component "unfold/components/button.html" with submit=1 name="clear" value="1" icon="event_busy" variant="default" %}{% translate "Clear times" %}{% endcomponent %}
+        {% component "unfold/components/button.html" with href="?format=xlsx" icon="download" variant="default" %}{% translate "Export to Excel" %}{% endcomponent %}
+    </form>
+</div>
+
+<div class="flex flex-col gap-6">
+{% for day, meetings in days.items %}
+    {% component "unfold/components/card.html" with title=day|date:"l, j F Y" title_icon="today" %}
+        <div class="overflow-x-auto -mx-6 -mb-6">
+        <table class="w-full border-separate border-spacing-none">
+            <thead><tr class="bg-base-50 dark:bg-base-900">
+                <th class="px-3 py-2 text-left border-b border-base-200 dark:border-base-800 font-semibold text-important first:pl-6">{% translate "Time" %}</th>
+                <th class="px-3 py-2 text-left border-b border-base-200 dark:border-base-800 font-semibold text-important">{% translate "Table" %}</th>
+                <th class="px-3 py-2 text-left border-b border-base-200 dark:border-base-800 font-semibold text-important">{% translate "First company" %}</th>
+                <th class="px-3 py-2 text-left border-b border-base-200 dark:border-base-800 font-semibold text-important">{% translate "Second company" %}</th>
+                <th class="px-3 py-2 text-left border-b border-base-200 dark:border-base-800 font-semibold text-important last:pr-6">{% translate "Status" %}</th>
+            </tr></thead>
+            <tbody>
+            {% for m in meetings %}
+                {% ifchanged m.scheduled_at %}{% cycle '' 'bg-base-50 dark:bg-white/[.02]' as rowclass silent %}{% endifchanged %}
+                <tr class="{{ rowclass }}">
+                    <td class="px-3 py-2 border-b border-base-200 dark:border-base-800 first:pl-6 font-semibold text-important">{% ifchanged m.scheduled_at %}{{ m.scheduled_at|time:"H:i" }}{% endifchanged %}</td>
+                    <td class="px-3 py-2 border-b border-base-200 dark:border-base-800">{{ m.table|default:"—" }}</td>
+                    <td class="px-3 py-2 border-b border-base-200 dark:border-base-800">{{ m.company_a.name }} <span class="text-subtle text-xs">{{ m.company_a.country|default:"" }}</span></td>
+                    <td class="px-3 py-2 border-b border-base-200 dark:border-base-800">{{ m.company_b.name }} <span class="text-subtle text-xs">{{ m.company_b.country|default:"" }}</span></td>
+                    <td class="px-3 py-2 border-b border-base-200 dark:border-base-800 last:pr-6">{% include "unfold/helpers/label.html" with text=m.get_status_display %}</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        </div>
+    {% endcomponent %}
+{% endfor %}
+
+{% if unscheduled %}
+    {% component "unfold/components/card.html" with title=_("Meetings without time") title_icon="pending_actions" %}
+        <ul class="flex flex-col gap-1">
+        {% for m in unscheduled %}
+            <li>{{ m.company_a.name }} ↔ {{ m.company_b.name }} {% include "unfold/helpers/label.html" with text=m.get_status_display %}</li>
+        {% endfor %}
+        </ul>
+    {% endcomponent %}
+{% endif %}
+
+{% if not days and not unscheduled %}
+    {% component "unfold/components/card.html" with title=_("No meetings yet") title_icon="info" %}
+        <p>{% translate "Add participants to the event, then use “Suggest matches” to create meetings." %}</p>
+    {% endcomponent %}
+{% endif %}
+</div>
+{% endblock %}

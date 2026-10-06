@@ -725,3 +725,216 @@ msgstr "Bitiş tarihi"
 
 msgid "Filters"
 msgstr "Filtreler"
+
+msgid "Participants"
+msgstr "Katılımcılar"
+
+msgid "Add selected companies to an event"
+msgstr "Seçili firmaları etkinliğe ekle"
+
+#, python-format
+msgid "%(created)d companies added to “%(event)s”, %(skipped)d were already there."
+msgstr "“%(event)s” etkinliğine %(created)d firma eklendi, %(skipped)d tanesi zaten vardı."
+
+msgid "Event"
+msgstr "Etkinlik"
+
+msgid "Meeting schedule"
+msgstr "Görüşme programı"
+
+msgid "Suggest matches"
+msgstr "Eşleştirme önerileri"
+
+#, python-format
+msgid "Meetings created: %(n)d."
+msgstr "Oluşturulan görüşmeler: %(n)d."
+
+msgid "Schedule"
+msgstr "Program"
+
+#, python-format
+msgid "Times removed from %(n)d meetings."
+msgstr "%(n)d görüşmenin saati kaldırıldı."
+
+#, python-format
+msgid "Meetings scheduled: %(n)d."
+msgstr "Programa alınan görüşmeler: %(n)d."
+
+#, python-format
+msgid "%(n)d meetings did not fit into the time slots. Add a day, tables or shorter meetings, or remove some meetings."
+msgstr "%(n)d görüşme zaman dilimlerine sığmadı. Gün veya masa ekleyin, görüşme süresini kısaltın ya da bazı görüşmeleri kaldırın."
+
+msgid "wants to meet"
+msgstr "görüşmek istediği"
+
+#, python-format
+msgid "Updated: %(n)d."
+msgstr "Güncellendi: %(n)d."
+
+msgid "Mark as confirmed"
+msgstr "Onaylandı olarak işaretle"
+
+msgid "Mark as declined"
+msgstr "Reddetti olarak işaretle"
+
+msgid "Mark as attended"
+msgstr "Katıldı olarak işaretle"
+
+msgid "Mark as held"
+msgstr "Gerçekleşti olarak işaretle"
+
+msgid "Mark as cancelled"
+msgstr "İptal edildi olarak işaretle"
+
+msgid "Time"
+msgstr "Saat"
+
+msgid "Table"
+msgstr "Masa"
+
+msgid "First company"
+msgstr "Birinci firma"
+
+msgid "Second company"
+msgstr "İkinci firma"
+
+msgid "Status"
+msgstr "Durum"
+
+msgid "By company"
+msgstr "Firmalara göre"
+
+msgid "Partner"
+msgstr "Görüşme ortağı"
+
+msgid "Role"
+msgstr "Rol"
+
+msgid "wanted country"
+msgstr "istenen ülke"
+
+msgid "meetings start at"
+msgstr "görüşmelerin başlangıcı"
+
+msgid "meetings end at"
+msgstr "görüşmelerin bitişi"
+
+msgid "break from"
+msgstr "ara başlangıcı"
+
+msgid "break until"
+msgstr "ara bitişi"
+
+msgid "meeting length (minutes)"
+msgstr "görüşme süresi (dakika)"
+
+msgid "number of tables"
+msgstr "masa sayısı"
+
+msgid "Meetings held at the same time. Leave empty for no limit."
+msgstr "Aynı anda yapılan görüşme sayısı. Sınır yoksa boş bırakın."
+
+msgid "Meetings must end after they start."
+msgstr "Görüşmeler başladıktan sonra bitmelidir."
+
+msgid "Enter both break times, the end after the start."
+msgstr "Her iki ara saatini girin, bitiş başlangıçtan sonra olmalı."
+
+msgid "Invited"
+msgstr "Davet edildi"
+
+msgid "Confirmed"
+msgstr "Onayladı"
+
+msgid "Declined"
+msgstr "Reddetti"
+
+msgid "Attended"
+msgstr "Katıldı"
+
+msgid "wants to meet industries"
+msgstr "görüşmek istediği sektörler"
+
+msgid "Empty: companies of the same industries."
+msgstr "Boş: aynı sektördeki firmalar."
+
+msgid "wants to meet countries"
+msgstr "görüşmek istediği ülkeler"
+
+msgid "Empty: any country."
+msgstr "Boş: tüm ülkeler."
+
+msgid "max. meetings"
+msgstr "maks. görüşme"
+
+msgid "Empty: no limit."
+msgstr "Boş: sınır yok."
+
+msgid "table"
+msgstr "masa"
+
+msgid "There are no events yet. Create an event first."
+msgstr "Henüz etkinlik yok. Önce bir etkinlik oluşturun."
+
+msgid "Add to event"
+msgstr "Etkinliğe ekle"
+
+msgid "Pairs are suggested when a buyer meets a seller (or “buyer and seller”) and their industries match. Check the participants’ roles and the industries they want to meet."
+msgstr "Alıcı ile satıcı (veya “alıcı ve satıcı”) eşleştirilir ve sektörleri uyuşmalıdır. Katılımcıların rollerini ve görüşmek istedikleri sektörleri kontrol edin."
+
+msgid "Create selected meetings"
+msgstr "Seçili görüşmeleri oluştur"
+
+msgid "Score"
+msgstr "Puan"
+
+msgid "Why"
+msgstr "Neden"
+
+msgid "Set the event dates and meeting hours to build a schedule."
+msgstr "Program oluşturmak için etkinlik tarihlerini ve görüşme saatlerini girin."
+
+msgid "Build schedule"
+msgstr "Programı oluştur"
+
+msgid "Clear times"
+msgstr "Saatleri temizle"
+
+msgid "Export to Excel"
+msgstr "Excel'e aktar"
+
+msgid "Add participants to the event, then use “Suggest matches” to create meetings."
+msgstr "Etkinliğe katılımcı ekleyin, ardından görüşme oluşturmak için “Eşleştirme önerileri”ni kullanın."
+
+msgid "No new pairs found"
+msgstr "Yeni eşleşme bulunamadı"
+
+msgid "Suggested pairs"
+msgstr "Önerilen eşleşmeler"
+
+#, python-format
+msgid "%(total)s possible pairs, best first. %(checked)s are preselected so that every company fits into the %(slots)s time slots."
+msgstr "%(total)s olası eşleşme, en iyisi önce. Her firmanın %(slots)s zaman dilimine sığması için %(checked)s tanesi önceden seçildi."
+
+msgid "Meetings without time"
+msgstr "Saati belirlenmemiş görüşmeler"
+
+msgid "No meetings yet"
+msgstr "Henüz görüşme yok"
+
+#, python-format
+msgid "%(slots)s time slots of %(minutes)s minutes."
+msgstr "%(minutes)s dakikalık %(slots)s zaman dilimi."
+
+#, python-format
+msgid "%(tables)s tables."
+msgstr "%(tables)s masa."
+
+msgid "Selected companies"
+msgstr "Seçili firmalar"
+
+#, python-format
+msgid "The event has %(n)s participant."
+msgid_plural "The event has %(n)s participants."
+msgstr[0] "Etkinlikte %(n)s katılımcı var."
+msgstr[1] "Etkinlikte %(n)s katılımcı var."

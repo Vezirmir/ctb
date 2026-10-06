@@ -38,6 +38,10 @@ python manage.py runserver
 python manage.py import_companies "C:\Users\...\CTB\2026"
 ```
 
+## Бесплатный тестовый запуск в интернете
+
+Пошаговая инструкция: [docs/deploy-pythonanywhere.md](docs/deploy-pythonanywhere.md).
+
 ## Настройки для сервера (переменные окружения)
 
 | Переменная | Значение |

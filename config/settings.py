@@ -138,8 +138,10 @@ THEMES = {
         },
     },
     # Inspired by n8n.io: violet-black surfaces, pink brand colour, ember gradient buttons.
+    # Dark by default; users can switch to light in the account menu.
     "n8n": {
-        "mode": "dark",
+        "mode": None,
+        "scripts": ["directory/theme-default-dark.js"],
         "styles": ["directory/theme-n8n.css"],
         "colors": {
             "base": _scale([98.5, 96.5, 92.5, 86, 70, 55, 44, 34, 24, 17.5, 13.5],
@@ -180,6 +182,7 @@ UNFOLD = {
     "SHOW_LANGUAGES": True,
     "SHOW_BACK_BUTTON": True,
     **({"THEME": THEME["mode"]} if THEME["mode"] else {}),
+    "SCRIPTS": [(lambda request, path=path: static(path)) for path in THEME.get("scripts", [])],
     "DASHBOARD_CALLBACK": "directory.dashboard.dashboard_callback",
     "STYLES": [lambda request: static("directory/admin.css")] + [
         (lambda request, path=path: static(path)) for path in THEME["styles"]

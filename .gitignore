@@ -9,3 +9,4 @@ data/
 *.zip
 ~$*
 .secret_key
+media/

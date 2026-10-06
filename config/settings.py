@@ -99,6 +99,11 @@ STORAGES = {
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
+# Uploaded files (e-mail attachments). Served only to logged-in staff, see config/urls.py.
+MEDIA_URL = "media/"
+MEDIA_ROOT = BASE_DIR / "media"
+DEFAULT_FROM_EMAIL = "noreply@localhost"
+
 # Hosting proxies (PythonAnywhere etc.) terminate HTTPS and pass the scheme in this header.
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 CSRF_FAILURE_VIEW = "directory.views.csrf_failure"
@@ -246,6 +251,10 @@ UNFOLD = {
                     {"title": _("Invitations"), "icon": "forward_to_inbox",
                      "link": _changelist("participation"),
                      "badge": "directory.dashboard.follow_up_badge", "badge_variant": "danger"},
+                    {"title": _("Invitation templates"), "icon": "drafts",
+                     "link": _changelist("emailtemplate")},
+                    {"title": _("My signature"), "icon": "signature",
+                     "link": reverse_lazy("admin:directory_signature")},
                     {"title": _("Meetings"), "icon": "handshake", "link": _changelist("meeting")},
                 ],
             },
@@ -267,6 +276,9 @@ UNFOLD = {
                      "permission": lambda request: request.user.is_superuser},
                     {"title": _("Groups"), "icon": "group",
                      "link": reverse_lazy("admin:auth_group_changelist"),
+                     "permission": lambda request: request.user.is_superuser},
+                    {"title": _("Mail settings"), "icon": "settings",
+                     "link": _changelist("mailsettings"),
                      "permission": lambda request: request.user.is_superuser},
                 ],
             },

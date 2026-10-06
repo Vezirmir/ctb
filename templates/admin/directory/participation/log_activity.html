@@ -46,7 +46,7 @@
                             {% if a.contact %}<span class="text-subtle">{{ a.contact }}</span>{% endif %}
                             {% if a.created_by %}<span class="text-subtle text-xs">· {{ a.created_by }}</span>{% endif %}
                         </div>
-                        {% if a.comment %}<p class="whitespace-pre-line">{{ a.comment }}</p>{% endif %}
+                        {% if a.comment %}<p>{{ a.comment|linebreaksbr }}</p>{% endif %}
                     </li>
                 {% endfor %}
                 </ul>

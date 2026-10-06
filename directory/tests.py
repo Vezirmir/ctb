@@ -595,3 +595,135 @@ class InvitationTests(TestCase):
         log_activity(self.p, "call", self.user, comment="hello")
         response = self.client.get(reverse("admin:directory_participation_change", args=[self.p.pk]))
         self.assertContains(response, "hello")
+
+
+import shutil
+import tempfile
+
+from django.core import mail
+from django.core.files.base import ContentFile
+from django.test import override_settings
+
+MEDIA_TMP = tempfile.mkdtemp()
+
+
+@override_settings(MEDIA_ROOT=MEDIA_TMP)
+class InvitationMailTests(TestCase):
+    @classmethod
+    def tearDownClass(cls):
+        super().tearDownClass()
+        shutil.rmtree(MEDIA_TMP, ignore_errors=True)
+
+    def setUp(self):
+        translation.activate("en")
+        from .models import EmailTemplate, Event, MailSettings, Participation, UserProfile
+        self.user = get_user_model().objects.create_superuser(
+            "ali", "ali@ctb.example", "pw", first_name="Ali", last_name="Yılmaz")
+        UserProfile.objects.create(user=self.user, signature="Saygılarımızla,\n{sender}\nCTB")
+        self.client.force_login(self.user)
+        MailSettings.objects.create(pk=1, username="ctb@gmail.com", password="secret",
+                                    from_email="ctb@gmail.com", from_name="CTB")
+        self.event = Event.objects.create(name="Bursa 2026", city="Bursa",
+                                          start_date=date(2026, 11, 3), end_date=date(2026, 11, 4))
+        ru = Country.objects.create(name_en="Russia", iso_code="RU")
+        self.acme = Company.objects.create(name="Acme", country=ru)
+        Email.objects.create(company=self.acme, email="info@acme.ru", source="website")
+        Email.objects.create(company=self.acme, email="sales@acme.ru", source="list")
+        Contact.objects.create(company=self.acme, full_name="Ivan Petrov", category="procurement")
+        self.nomail = Company.objects.create(name="No Mail Ltd")
+        self.p1 = Participation.objects.create(event=self.event, company=self.acme, status="shortlisted")
+        self.p2 = Participation.objects.create(event=self.event, company=self.nomail, status="shortlisted")
+        self.template = EmailTemplate.objects.create(
+            name="Bursa invitation", subject="Invitation: {event} ({event_date})",
+            body="Dear {contact},\n\nWe invite {company} to {event} in {event_city}. {unknown}")
+        self.template.attachments.create(file=ContentFile(b"%PDF-1.4 demo", name="program.pdf"))
+
+    def test_compose_with_placeholders_and_signature(self):
+        from .mailing import compose, context_for
+        subject, body = compose(self.template, context_for(self.p1, self.user), self.user)
+        self.assertEqual(subject, "Invitation: Bursa 2026 (03.11.2026 – 04.11.2026)")
+        self.assertIn("Dear Ivan Petrov,", body)
+        self.assertIn("We invite Acme to Bursa 2026 in Bursa. {unknown}", body)
+        self.assertTrue(body.endswith("Saygılarımızla,\nAli Yılmaz\nCTB"))
+
+    def test_send_from_invitations_list(self):
+        url = reverse("admin:directory_participation_changelist")
+        ids = [self.p1.pk, self.p2.pk]
+        first = self.client.post(url, {"action": "send_invitations", "_selected_action": ids})
+        self.assertContains(first, "No Mail Ltd")
+        preview = self.client.post(url, {"action": "send_invitations", "_selected_action": ids,
+                                         "template": self.template.pk, "mode": "first"})
+        self.assertContains(preview, "Dear Ivan Petrov")
+        self.assertContains(preview, "sales@acme.ru")
+        self.assertEqual(len(mail.outbox), 0)
+        sent = self.client.post(url, {"action": "send_invitations", "_selected_action": ids,
+                                      "template": self.template.pk, "mode": "first", "send": "1"})
+        self.assertEqual(sent.status_code, 302)
+        self.assertEqual(len(mail.outbox), 1)
+        message = mail.outbox[0]
+        self.assertEqual(message.to, ["sales@acme.ru"])
+        self.assertEqual(message.from_email, "CTB <ctb@gmail.com>")
+        self.assertEqual(message.reply_to, ["ali@ctb.example"])
+        self.assertEqual(message.attachments[0][0], "program.pdf")
+        self.assertIn("Ali Yılmaz", message.body)
+        self.assertEqual(message.alternatives[0][1], "text/html")
+        self.p1.refresh_from_db()
+        self.assertEqual(self.p1.status, "invited")
+        activity = self.p1.activities.get()
+        self.assertEqual((activity.kind, activity.email), ("email", "sales@acme.ru"))
+        self.assertEqual(self.p2.activities.count(), 0)
+
+    def test_send_to_all_addresses(self):
+        from .mailing import send_invitations
+        report = send_invitations(self.template, [self.p1], self.user, mode="all")
+        self.assertEqual(len(report.sent), 1)
+        self.assertEqual(sorted(mail.outbox[0].to), ["info@acme.ru", "sales@acme.ru"])
+
+    @override_settings(EMAIL_BACKEND="django.core.mail.backends.smtp.EmailBackend")
+    def test_not_configured_mailbox_is_reported(self):
+        from .mailing import MailNotConfigured, mail_connection
+        from .models import MailSettings
+        MailSettings.objects.filter(pk=1).update(password="")
+        with self.assertRaises(MailNotConfigured):
+            mail_connection()
+
+    def test_template_admin_preview_and_test_mail(self):
+        for name in ("changelist", "add"):
+            self.assertEqual(self.client.get(reverse(f"admin:directory_emailtemplate_{name}")).status_code, 200)
+        change = self.client.get(reverse("admin:directory_emailtemplate_change", args=[self.template.pk]))
+        self.assertContains(change, "{company}")
+        preview = self.client.get(reverse("admin:directory_emailtemplate_preview", args=[self.template.pk]))
+        self.assertContains(preview, "Dear Ivan Petrov")
+        self.client.get(reverse("admin:directory_emailtemplate_send_test", args=[self.template.pk]))
+        self.assertEqual(mail.outbox[0].to, ["ali@ctb.example"])
+        self.assertTrue(mail.outbox[0].subject.startswith("[TEST]"))
+
+    def test_signature_page(self):
+        url = reverse("admin:directory_signature")
+        self.assertContains(self.client.get(url), "Saygılarımızla")
+        self.client.post(url, {"signature": "Best regards,\nAli"})
+        self.user.profile.refresh_from_db()
+        self.assertEqual(self.user.profile.signature, "Best regards,\nAli")
+
+    def test_mail_settings_keep_password_and_superuser_only(self):
+        from .models import MailSettings
+        url = reverse("admin:directory_mailsettings_changelist")
+        self.assertRedirects(self.client.get(url),
+                             reverse("admin:directory_mailsettings_change", args=[1]),
+                             fetch_redirect_response=False)
+        page = self.client.get(reverse("admin:directory_mailsettings_change", args=[1]))
+        self.assertNotContains(page, "secret")
+        self.client.post(reverse("admin:directory_mailsettings_change", args=[1]), {
+            "host": "smtp.gmail.com", "port": 587, "use_tls": "on", "username": "ctb@gmail.com",
+            "password": "", "from_email": "ctb@gmail.com", "from_name": "CTB Team"})
+        settings_obj = MailSettings.load()
+        self.assertEqual((settings_obj.password, settings_obj.from_name), ("secret", "CTB Team"))
+        staff = get_user_model().objects.create_user("staff", "s@x.com", "pw", is_staff=True)
+        self.client.force_login(staff)
+        self.assertEqual(self.client.get(reverse("admin:directory_mailsettings_change", args=[1])).status_code, 403)
+
+    def test_attachments_only_for_staff(self):
+        url = self.template.attachments.get().file.url
+        self.assertEqual(self.client.get(url).status_code, 200)
+        self.client.logout()
+        self.assertEqual(self.client.get(url).status_code, 302)

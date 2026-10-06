@@ -407,3 +407,97 @@ class Meeting(models.Model):
     def clean(self):
         if self.company_a_id and self.company_a_id == self.company_b_id:
             raise ValidationError(_("A company cannot meet with itself."))
+
+
+class EmailTemplate(models.Model):
+    """Invitation e-mail: subject, text with placeholders and attachments."""
+
+    name = models.CharField(_("name"), max_length=200)
+    subject = models.CharField(_("subject"), max_length=300)
+    body = models.TextField(_("text"))
+    created_at = models.DateTimeField(_("created"), auto_now_add=True)
+    updated_at = models.DateTimeField(_("updated"), auto_now=True)
+
+    class Meta:
+        ordering = ["name"]
+        verbose_name = _("invitation template")
+        verbose_name_plural = _("invitation templates")
+
+    def __str__(self):
+        return self.name
+
+
+class TemplateAttachment(models.Model):
+    template = models.ForeignKey(
+        EmailTemplate, verbose_name=_("template"), on_delete=models.CASCADE,
+        related_name="attachments",
+    )
+    file = models.FileField(_("file"), upload_to="attachments/%Y/%m/")
+    original_name = models.CharField(max_length=255, blank=True, editable=False)
+
+    class Meta:
+        verbose_name = _("attachment")
+        verbose_name_plural = _("attachments")
+
+    def __str__(self):
+        return self.filename
+
+    def save(self, *args, **kwargs):
+        if not self.original_name and self.file:
+            # Storage may rename duplicates ("program_ab12cd.pdf"); recipients see the real name.
+            self.original_name = self.file.name.rsplit("/", 1)[-1][:255]
+        super().save(*args, **kwargs)
+
+    @property
+    def filename(self):
+        return self.original_name or self.file.name.rsplit("/", 1)[-1]
+
+
+class UserProfile(models.Model):
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL, verbose_name=_("user"), on_delete=models.CASCADE,
+        related_name="profile",
+    )
+    signature = models.TextField(
+        _("signature"), blank=True,
+        help_text=_("Added at the end of every e-mail you send from the site."),
+    )
+
+    class Meta:
+        verbose_name = _("profile")
+        verbose_name_plural = _("profiles")
+
+    def __str__(self):
+        return str(self.user)
+
+
+class MailSettings(models.Model):
+    """The mailbox the site sends invitations from (one record)."""
+
+    host = models.CharField(_("SMTP server"), max_length=200, default="smtp.gmail.com")
+    port = models.PositiveIntegerField(_("port"), default=587)
+    use_tls = models.BooleanField(_("use TLS"), default=True)
+    username = models.CharField(_("login"), max_length=200, blank=True,
+                                help_text=_("Usually the full e-mail address."))
+    password = models.CharField(
+        _("password"), max_length=200, blank=True,
+        help_text=_("For Gmail use an app password (Google account → Security → App passwords)."),
+    )
+    from_email = models.EmailField(_("sender address"), blank=True)
+    from_name = models.CharField(_("sender name"), max_length=200, blank=True, default="CTB")
+
+    class Meta:
+        verbose_name = _("mail settings")
+        verbose_name_plural = _("mail settings")
+
+    def __str__(self):
+        return str(_("Mail settings"))
+
+    @classmethod
+    def load(cls):
+        obj, _created = cls.objects.get_or_create(pk=1)
+        return obj
+
+    @property
+    def is_configured(self):
+        return bool(self.host and self.username and self.password and self.from_email)

@@ -1154,3 +1154,209 @@ msgstr "davet"
 
 msgid "invitations"
 msgstr "davetler"
+
+msgid "Invitation templates"
+msgstr "Davet şablonları"
+
+msgid "My signature"
+msgstr "İmzam"
+
+msgid "Mail settings"
+msgstr "E-posta ayarları"
+
+msgid "signature"
+msgstr "imza"
+
+msgid "Send invitation e-mail from the site…"
+msgstr "Siteden davet e-postası gönder…"
+
+#, python-format
+msgid "Sent: %(n)d e-mails."
+msgstr "Gönderildi: %(n)d e-posta."
+
+#, python-format
+msgid "No e-mail address: %(names)s"
+msgstr "E-posta adresi yok: %(names)s"
+
+#, python-format
+msgid "Not sent to %(company)s: %(error)s"
+msgstr "%(company)s firmasına gönderilemedi: %(error)s"
+
+msgid "Send invitation e-mail"
+msgstr "Davet e-postası gönder"
+
+#, python-format
+msgid "Placeholders: %(list)s. Your signature is added at the end automatically."
+msgstr "Yer tutucular: %(list)s. İmzanız sona otomatik eklenir."
+
+msgid "Placeholders can be used here too."
+msgstr "Burada da yer tutucular kullanılabilir."
+
+msgid "attachments"
+msgstr "ekler"
+
+msgid "Preview"
+msgstr "Önizleme"
+
+msgid "Add a company to an event first to see a preview."
+msgstr "Önizleme için önce bir etkinliğe firma ekleyin."
+
+msgid "Send a test e-mail to me"
+msgstr "Bana test e-postası gönder"
+
+msgid "Your user account has no e-mail address."
+msgstr "Kullanıcı hesabınızda e-posta adresi yok."
+
+#, python-format
+msgid "Sending failed: %(error)s"
+msgstr "Gönderilemedi: %(error)s"
+
+#, python-format
+msgid "Test e-mail sent to %(email)s."
+msgstr "Test e-postası %(email)s adresine gönderildi."
+
+msgid "Signature saved."
+msgstr "İmza kaydedildi."
+
+msgid "Mailbox"
+msgstr "Posta kutusu"
+
+msgid "Sender"
+msgstr "Gönderen"
+
+msgid "Mail settings saved."
+msgstr "E-posta ayarları kaydedildi."
+
+msgid "Template"
+msgstr "Şablon"
+
+msgid "Recipients"
+msgstr "Alıcılar"
+
+msgid "One address per company (from the company list first)"
+msgstr "Firma başına bir adres (öncelik firma listesindeki)"
+
+msgid "All addresses of the company"
+msgstr "Firmanın tüm adresleri"
+
+msgid "password"
+msgstr "parola"
+
+msgid "For Gmail use an app password (Google account → Security → App passwords). Leave empty to keep the saved password."
+msgstr "Gmail için uygulama şifresi kullanın (Google hesabı → Güvenlik → Uygulama şifreleri). Kayıtlı parolayı korumak için boş bırakın."
+
+msgid "Sending is not set up yet: fill in the Mail settings page."
+msgstr "Gönderim henüz ayarlanmadı: E-posta ayarları sayfasını doldurun."
+
+#, python-format
+msgid "Sent from the site: %(template)s"
+msgstr "Siteden gönderildi: %(template)s"
+
+msgid "subject"
+msgstr "konu"
+
+msgid "text"
+msgstr "metin"
+
+msgid "invitation template"
+msgstr "davet şablonu"
+
+msgid "invitation templates"
+msgstr "davet şablonları"
+
+msgid "template"
+msgstr "şablon"
+
+msgid "file"
+msgstr "dosya"
+
+msgid "attachment"
+msgstr "ek"
+
+msgid "user"
+msgstr "kullanıcı"
+
+msgid "Added at the end of every e-mail you send from the site."
+msgstr "Siteden gönderdiğiniz her e-postanın sonuna eklenir."
+
+msgid "profile"
+msgstr "profil"
+
+msgid "profiles"
+msgstr "profiller"
+
+msgid "SMTP server"
+msgstr "SMTP sunucusu"
+
+msgid "port"
+msgstr "port"
+
+msgid "use TLS"
+msgstr "TLS kullan"
+
+msgid "login"
+msgstr "kullanıcı adı"
+
+msgid "Usually the full e-mail address."
+msgstr "Genellikle tam e-posta adresi."
+
+msgid "For Gmail use an app password (Google account → Security → App passwords)."
+msgstr "Gmail için uygulama şifresi kullanın (Google hesabı → Güvenlik → Uygulama şifreleri)."
+
+msgid "sender address"
+msgstr "gönderen adresi"
+
+msgid "sender name"
+msgstr "gönderen adı"
+
+msgid "mail settings"
+msgstr "e-posta ayarları"
+
+msgid "no e-mail address – will be skipped"
+msgstr "e-posta adresi yok – atlanacak"
+
+msgid "company name"
+msgstr "firma adı"
+
+msgid "contact person (company name if none)"
+msgstr "irtibat kişisi (yoksa firma adı)"
+
+msgid "event name"
+msgstr "etkinlik adı"
+
+msgid "event dates"
+msgstr "etkinlik tarihleri"
+
+msgid "event city"
+msgstr "etkinlik şehri"
+
+msgid "company's country"
+msgstr "firmanın ülkesi"
+
+msgid "your name"
+msgstr "adınız"
+
+#, python-format
+msgid "Example: %(company)s, %(event)s"
+msgstr "Örnek: %(company)s, %(event)s"
+
+#, python-format
+msgid "You have no signature yet. <a class=\"text-primary-600\" href=\"%(signature_url)s\">Add it</a> and it will appear at the end of every e-mail."
+msgstr "Henüz imzanız yok. <a class=\"text-primary-600\" href=\"%(signature_url)s\">Ekleyin</a>, her e-postanın sonunda görünecek."
+
+msgid "Example"
+msgstr "Örnek"
+
+#, python-format
+msgid "At most %(limit)s e-mails are sent at once; run it again for the rest."
+msgstr "Tek seferde en fazla %(limit)s e-posta gönderilir; kalanlar için tekrar çalıştırın."
+
+#, python-format
+msgid "As %(company)s will receive it:"
+msgstr "%(company)s firmasının göreceği şekilde:"
+
+#, python-format
+msgid "Send to %(n)s company"
+msgid_plural "Send to %(n)s companies"
+msgstr[0] "%(n)s firmaya gönder"
+msgstr[1] "%(n)s firmaya gönder"

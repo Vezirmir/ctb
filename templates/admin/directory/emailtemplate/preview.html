@@ -1,0 +1,21 @@
+{% extends "admin/base_site.html" %}
+{% load i18n unfold %}
+
+{% block breadcrumbs %}{% endblock %}
+
+{% block content %}
+<div class="flex flex-wrap gap-2 mb-6">
+    {% component "unfold/components/button.html" with href=change_url icon="edit" variant="default" %}{{ template_obj.name }}{% endcomponent %}
+</div>
+{% component "unfold/components/card.html" with title=_("Preview") title_icon="visibility" %}
+    <p class="text-subtle text-sm mb-3">{% blocktranslate with company=sample.company event=sample.event %}Example: {{ company }}, {{ event }}{% endblocktranslate %}</p>
+    <p class="text-important font-semibold mb-3">{{ subject }}</p>
+    <div class="whitespace-pre-line border border-base-200 rounded-default p-4 dark:border-base-800">{{ body|linebreaksbr }}</div>
+    {% if attachments %}
+        <p class="text-sm mt-3">📎 {% for a in attachments %}<a class="text-primary-600" href="{{ a.file.url }}">{{ a.filename }}</a>{% if not forloop.last %}, {% endif %}{% endfor %}</p>
+    {% endif %}
+    {% if not has_signature %}
+        <p class="text-subtle text-sm mt-4">{% url 'admin:directory_signature' as signature_url %}{% blocktranslate %}You have no signature yet. <a class="text-primary-600" href="{{ signature_url }}">Add it</a> and it will appear at the end of every e-mail.{% endblocktranslate %}</p>
+    {% endif %}
+{% endcomponent %}
+{% endblock %}

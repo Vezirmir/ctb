@@ -3,11 +3,15 @@ from pathlib import PurePosixPath
 from django import forms
 from django.utils.translation import gettext_lazy as _
 from unfold.widgets import (
-    UnfoldAdminFileFieldWidget, UnfoldAdminSelectWidget, UnfoldAdminSingleDateWidget,
+    UnfoldAdminFileFieldWidget, UnfoldAdminPasswordToggleWidget, UnfoldAdminSelectWidget,
+    UnfoldAdminSingleDateWidget,
     UnfoldAdminSplitDateTimeWidget, UnfoldAdminTextareaWidget,
 )
 
-from .models import Activity, Contact, Country, Event, Industry, Participation
+from .models import (
+    Activity, Contact, Country, EmailTemplate, Event, Industry, MailSettings, Participation,
+    UserProfile,
+)
 
 
 class ImportForm(forms.Form):
@@ -73,3 +77,39 @@ class ActivityForm(forms.Form):
         self.fields["happened_at"].widget.widgets[1].format = "%H:%M"
         self.fields["status"].choices = [("", _("Keep: %(status)s") % {
             "status": participation.get_status_display()})] + list(Participation.Status.choices)
+
+
+class SendInvitationsForm(forms.Form):
+    template = forms.ModelChoiceField(EmailTemplate.objects.all(), label=_("Template"),
+                                      widget=UnfoldAdminSelectWidget)
+    mode = forms.ChoiceField(
+        label=_("Recipients"), widget=UnfoldAdminSelectWidget,
+        choices=[("first", _("One address per company (from the company list first)")),
+                 ("all", _("All addresses of the company"))],
+    )
+
+
+class MailSettingsForm(forms.ModelForm):
+    """The password is never shown; leaving it empty keeps the saved one."""
+
+    password = forms.CharField(
+        label=_("Password"), required=False,
+        widget=UnfoldAdminPasswordToggleWidget(render_value=False,
+                                               attrs={"autocomplete": "new-password"}),
+        help_text=_("For Gmail use an app password (Google account → Security → App passwords). "
+                    "Leave empty to keep the saved password."),
+    )
+
+    class Meta:
+        model = MailSettings
+        fields = ["host", "port", "use_tls", "username", "password", "from_email", "from_name"]
+
+    def clean_password(self):
+        return self.cleaned_data["password"] or self.instance.password
+
+
+class SignatureForm(forms.ModelForm):
+    class Meta:
+        model = UserProfile
+        fields = ["signature"]
+        widgets = {"signature": UnfoldAdminTextareaWidget(attrs={"rows": 8})}

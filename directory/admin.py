@@ -14,7 +14,7 @@ from django.utils import timezone
 from django.utils.html import format_html, format_html_join
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils.translation import gettext_lazy as _
-from unfold.admin import ModelAdmin, TabularInline
+from unfold.admin import ModelAdmin, StackedInline, TabularInline
 from unfold.contrib.filters.admin import ChoicesDropdownFilter, RelatedDropdownFilter
 from unfold.decorators import action, display
 from unfold.forms import AdminPasswordChangeForm, UserChangeForm, UserCreationForm
@@ -24,14 +24,21 @@ from .exports import (
     companies_to_xlsx_response, emails_to_xlsx_response, import_template_response,
     schedule_to_xlsx_response,
 )
-from .forms import ActivityForm, AddToEventForm, ImportForm
+from .forms import (
+    ActivityForm, AddToEventForm, ImportForm, MailSettingsForm, SendInvitationsForm, SignatureForm,
+)
 from .importer import Importer, read_zip
 from .invitations import log_activity
+from .mailing import (
+    MAX_PER_SEND, MailNotConfigured, compose, context_for, placeholder_help, recipients,
+    send_invitations, send_test, signature_of,
+)
 from .matchmaking import (
     build_schedule, clear_schedule, create_meetings, preselect, schedule_rows, suggest,
 )
 from .models import (
-    Activity, Company, Contact, Country, Email, Event, Industry, Meeting, Participation, Tag,
+    Activity, Company, Contact, Country, Email, EmailTemplate, Event, Industry, MailSettings,
+    Meeting, Participation, Tag, TemplateAttachment, UserProfile,
 )
 
 admin.site.site_header = _("CTB — B2B company database")
@@ -67,11 +74,20 @@ admin.site.unregister(User)
 admin.site.unregister(Group)
 
 
+class UserProfileInline(StackedInline):
+    model = UserProfile
+    can_delete = False
+    verbose_name_plural = _("signature")
+    fields = ["signature"]
+    formfield_overrides = {models.TextField: {"widget": UnfoldAdminTextareaWidget(attrs={"rows": 6})}}
+
+
 @admin.register(User)
 class UserAdmin(BaseUserAdmin, ModelAdmin):
     form = UserChangeForm
     add_form = UserCreationForm
     change_password_form = AdminPasswordChangeForm
+    inlines = [UserProfileInline]
 
 
 @admin.register(Group)
@@ -606,7 +622,8 @@ class ParticipationAdmin(ModelAdmin):
                      "company__emails__email"]
     autocomplete_fields = ["event", "company", "wanted_industries", "wanted_countries"]
     list_select_related = ["company__country", "event"]
-    actions = ["log_invitation_emails", "mark_confirmed", "mark_declined", "mark_attended"]
+    actions = ["send_invitations", "log_invitation_emails", "mark_confirmed", "mark_declined",
+               "mark_attended"]
     actions_row = ["row_email", "row_call", "row_note"]
     inlines = [ActivityInline]
     fields = [("event", "company"), ("status", "next_action_on"), ("role", "max_meetings"),
@@ -734,6 +751,52 @@ class ParticipationAdmin(ModelAdmin):
 
     # bulk actions -----------------------------------------------------------------------
 
+    @admin.action(description=_("Send invitation e-mail from the site…"), permissions=["change"])
+    def send_invitations(self, request, queryset):
+        queryset = queryset.select_related("company__country", "event").prefetch_related(
+            "company__emails", "company__contacts")
+        form = SendInvitationsForm(request.POST if "template" in request.POST else None)
+        preview = None
+        if form.is_valid():
+            template, mode = form.cleaned_data["template"], form.cleaned_data["mode"]
+            if "send" in request.POST:
+                try:
+                    report = send_invitations(template, list(queryset), request.user, mode)
+                except MailNotConfigured as exc:
+                    messages.error(request, str(exc))
+                    return redirect("admin:directory_mailsettings_changelist")
+                if report.sent:
+                    messages.success(request, _("Sent: %(n)d e-mails.") % {"n": len(report.sent)})
+                if report.skipped:
+                    messages.warning(request, _("No e-mail address: %(names)s") % {
+                        "names": ", ".join(c.name for c in report.skipped)})
+                for company, error in report.failed:
+                    messages.error(request, _("Not sent to %(company)s: %(error)s") % {
+                        "company": company, "error": error})
+                return None
+            first = queryset.first()
+            if first:
+                subject, body = compose(template, context_for(first, request.user), request.user)
+                preview = {"company": first.company, "subject": subject, "body": body,
+                           "attachments": list(template.attachments.all())}
+            rows = [(p, recipients(p.company, mode)) for p in queryset]
+        else:
+            rows = [(p, recipients(p.company, "first")) for p in queryset]
+        context = {
+            **self.admin_site.each_context(request),
+            "opts": self.model._meta,
+            "title": _("Send invitation e-mail"),
+            "form": form,
+            "rows": rows,
+            "preview": preview,
+            "selected": queryset.values_list("pk", flat=True),
+            "select_across": request.POST.get("select_across", "0"),
+            "action_checkbox_name": admin.helpers.ACTION_CHECKBOX_NAME,
+            "mail_ready": MailSettings.load().is_configured,
+            "limit": MAX_PER_SEND,
+        }
+        return TemplateResponse(request, "admin/directory/participation/send_invitations.html", context)
+
     @admin.action(description=_("Invitation e-mail sent to selected companies"))
     def log_invitation_emails(self, request, queryset):
         for participation in queryset.select_related("company"):
@@ -781,3 +844,135 @@ class MeetingAdmin(ModelAdmin):
     @admin.action(description=_("Mark as cancelled"))
     def mark_cancelled(self, request, queryset):
         queryset.update(status=Meeting.Status.CANCELLED)
+
+
+# --------------------------------------------------------------------------- invitation e-mails
+
+class TemplateAttachmentInline(TabularInline):
+    model = TemplateAttachment
+    extra = 1
+    fields = ["file"]
+
+
+@admin.register(EmailTemplate)
+class EmailTemplateAdmin(ModelAdmin):
+    list_display = ["name", "subject", "attachment_count", "updated_at"]
+    search_fields = ["name", "subject", "body"]
+    inlines = [TemplateAttachmentInline]
+    actions_detail = ["preview", "send_test"]
+    fields = ["name", "subject", "body"]
+    formfield_overrides = {models.TextField: {"widget": UnfoldAdminTextareaWidget(attrs={"rows": 14})}}
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).annotate(_attachments=Count("attachments"))
+
+    def get_form(self, request, obj=None, **kwargs):
+        form = super().get_form(request, obj, **kwargs)
+        form.base_fields["body"].help_text = _(
+            "Placeholders: %(list)s. Your signature is added at the end automatically."
+        ) % {"list": placeholder_help()}
+        form.base_fields["subject"].help_text = _("Placeholders can be used here too.")
+        return form
+
+    @display(description=_("attachments"), ordering="_attachments")
+    def attachment_count(self, obj):
+        return obj._attachments
+
+    def _sample(self):
+        return (Participation.objects.select_related("company__country", "event")
+                .order_by("-event__start_date", "company__name").first())
+
+    @action(description=_("Preview"), url_path="preview", icon="visibility")
+    def preview(self, request, object_id):
+        template = get_object_or_404(EmailTemplate, pk=object_id)
+        sample = self._sample()
+        if sample is None:
+            messages.warning(request, _("Add a company to an event first to see a preview."))
+            return redirect("admin:directory_emailtemplate_change", template.pk)
+        subject, body = compose(template, context_for(sample, request.user), request.user)
+        context = {
+            **self.admin_site.each_context(request),
+            "opts": self.model._meta,
+            "title": _("Preview"),
+            "template_obj": template,
+            "sample": sample,
+            "subject": subject,
+            "body": body,
+            "attachments": template.attachments.all(),
+            "change_url": reverse("admin:directory_emailtemplate_change", args=[template.pk]),
+            "has_signature": bool(signature_of(request.user)),
+        }
+        return TemplateResponse(request, "admin/directory/emailtemplate/preview.html", context)
+
+    @action(description=_("Send a test e-mail to me"), url_path="send-test", icon="send")
+    def send_test(self, request, object_id):
+        template = get_object_or_404(EmailTemplate, pk=object_id)
+        sample = self._sample()
+        if not request.user.email:
+            messages.error(request, _("Your user account has no e-mail address."))
+        elif sample is None:
+            messages.warning(request, _("Add a company to an event first to see a preview."))
+        else:
+            try:
+                send_test(template, sample, request.user)
+            except MailNotConfigured as exc:
+                messages.error(request, str(exc))
+                return redirect("admin:directory_mailsettings_changelist")
+            except Exception as exc:
+                messages.error(request, _("Sending failed: %(error)s") % {"error": exc})
+            else:
+                messages.success(request, _("Test e-mail sent to %(email)s.") % {"email": request.user.email})
+        return redirect("admin:directory_emailtemplate_change", template.pk)
+
+    def get_urls(self):
+        return [
+            path("signature/", self.admin_site.admin_view(self.signature_view),
+                 name="directory_signature"),
+            *super().get_urls(),
+        ]
+
+    def signature_view(self, request):
+        profile, _created = UserProfile.objects.get_or_create(user=request.user)
+        form = SignatureForm(request.POST or None, instance=profile)
+        if request.method == "POST" and form.is_valid():
+            form.save()
+            messages.success(request, _("Signature saved."))
+            return redirect("admin:directory_signature")
+        context = {
+            **self.admin_site.each_context(request),
+            "opts": self.model._meta,
+            "title": _("My signature"),
+            "form": form,
+        }
+        return TemplateResponse(request, "admin/directory/emailtemplate/signature.html", context)
+
+
+@admin.register(MailSettings)
+class MailSettingsAdmin(ModelAdmin):
+    form = MailSettingsForm
+    fieldsets = [
+        (_("Mailbox"), {"fields": [("host", "port"), ("username", "password"), "use_tls"]}),
+        (_("Sender"), {"fields": [("from_email", "from_name")]}),
+    ]
+
+    def has_module_permission(self, request):
+        return request.user.is_superuser
+
+    def has_view_permission(self, request, obj=None):
+        return request.user.is_superuser
+
+    def has_change_permission(self, request, obj=None):
+        return request.user.is_superuser
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+    def changelist_view(self, request, extra_context=None):
+        return redirect("admin:directory_mailsettings_change", MailSettings.load().pk)
+
+    def response_change(self, request, obj):
+        messages.success(request, _("Mail settings saved."))
+        return redirect("admin:directory_mailsettings_change", obj.pk)

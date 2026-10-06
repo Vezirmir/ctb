@@ -1,0 +1,62 @@
+{% extends "admin/base_site.html" %}
+{% load i18n unfold %}
+
+{% block breadcrumbs %}{% endblock %}
+
+{% block content %}
+<form method="post">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="send_invitations">
+    <input type="hidden" name="select_across" value="{{ select_across }}">
+    {% for pk in selected %}<input type="hidden" name="{{ action_checkbox_name }}" value="{{ pk }}">{% endfor %}
+
+    <div class="grid lg:grid-cols-3 gap-6">
+        <div class="lg:col-span-2 flex flex-col gap-6">
+            {% component "unfold/components/card.html" with title=title title_icon="send" %}
+                {% if not mail_ready %}
+                    <p class="text-red-600 mb-4">{% translate "Sending is not set up yet: fill in the Mail settings page." %}</p>
+                {% endif %}
+                <div class="grid md:grid-cols-2 gap-x-6">
+                    {% include "unfold/helpers/field.html" with field=form.template %}
+                    {% include "unfold/helpers/field.html" with field=form.mode %}
+                </div>
+                <div class="flex flex-wrap gap-2">
+                    {% component "unfold/components/button.html" with submit=1 variant="default" icon="visibility" %}{% translate "Preview" %}{% endcomponent %}
+                    {% if preview and mail_ready %}
+                        {% component "unfold/components/button.html" with submit=1 name="send" value="1" icon="send" %}{% blocktranslate count n=rows|length %}Send to {{ n }} company{% plural %}Send to {{ n }} companies{% endblocktranslate %}{% endcomponent %}
+                    {% endif %}
+                </div>
+                {% if rows|length > limit %}
+                    <p class="text-subtle text-sm mt-3">{% blocktranslate %}At most {{ limit }} e-mails are sent at once; run it again for the rest.{% endblocktranslate %}</p>
+                {% endif %}
+            {% endcomponent %}
+
+            {% if preview %}
+                {% component "unfold/components/card.html" with title=_("Preview") title_icon="visibility" %}
+                    <p class="text-subtle text-sm mb-3">{% blocktranslate with company=preview.company %}As {{ company }} will receive it:{% endblocktranslate %}</p>
+                    <p class="text-important font-semibold mb-3">{{ preview.subject }}</p>
+                    <div class="whitespace-pre-line border border-base-200 rounded-default p-4 dark:border-base-800">{{ preview.body|linebreaksbr }}</div>
+                    {% if preview.attachments %}
+                        <p class="text-sm mt-3">📎 {% for a in preview.attachments %}{{ a.filename }}{% if not forloop.last %}, {% endif %}{% endfor %}</p>
+                    {% endif %}
+                {% endcomponent %}
+            {% endif %}
+        </div>
+
+        {% component "unfold/components/card.html" with title=_("Recipients") title_icon="group" %}
+            <ul class="flex flex-col gap-2 text-sm">
+                {% for participation, addresses in rows %}
+                    <li>
+                        <span class="text-important">{{ participation.company.name }}</span><br>
+                        {% if addresses %}
+                            <span class="text-subtle text-xs">{{ addresses|join:", " }}</span>
+                        {% else %}
+                            <span class="text-red-600 text-xs">{% translate "no e-mail address – will be skipped" %}</span>
+                        {% endif %}
+                    </li>
+                {% endfor %}
+            </ul>
+        {% endcomponent %}
+    </div>
+</form>
+{% endblock %}

@@ -36,7 +36,7 @@ python manage.py migrate --noinput
 DJANGO_DEBUG=0 DJANGO_SECRET_KEY=collectstatic python manage.py collectstatic --noinput -v0
 
 echo "==> 4/6 Administrator account"
-if python manage.py shell -c "from django.contrib.auth import get_user_model as g; import sys; sys.exit(0 if g().objects.filter(is_superuser=True).exists() else 1)"; then
+if python manage.py shell -v 0 -c "from django.contrib.auth import get_user_model as g; import sys; sys.exit(0 if g().objects.filter(is_superuser=True).exists() else 1)"; then
     echo "    already exists, skipping"
 else
     echo "    Choose the login and password you will use on the site:"
@@ -51,6 +51,9 @@ if [ ${#WSGI_FILES[@]} -ne 1 ]; then
     echo "!!  Python ${PYTHON#python}, then run this command again."
     exit 1
 fi
+SITE="$(basename "${WSGI_FILES[0]}" _wsgi.py | tr _ .)"
+HOSTS="$SITE,$HOSTS"
+ORIGINS="https://$SITE,$ORIGINS"
 cat > "${WSGI_FILES[0]}" <<WSGI
 import os
 import sys
@@ -77,4 +80,4 @@ echo
 echo "Last step on the Web tab:"
 echo "  * Virtualenv:  $APP_DIR/.venv"
 echo "  * Press the green Reload button"
-echo "Then open https://$(basename "${WSGI_FILES[0]}" _wsgi.py | tr _ .)/"
+echo "Then open https://$SITE/"

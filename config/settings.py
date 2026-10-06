@@ -126,7 +126,7 @@ def _scale(lightness, chroma, hue):
     return {step: f"oklch({l}% {c} {hue})" for step, l, c in zip(steps, lightness, chroma)}
 
 
-# Colour themes. Pick one with the CTB_THEME environment variable.
+# Colour themes. n8n is the default; override with the CTB_THEME environment variable.
 THEMES = {
     # Blue on neutral grey, light or dark as the user prefers.
     "classic": {
@@ -168,7 +168,7 @@ THEMES = {
         },
     },
 }
-THEME = THEMES.get(os.environ.get("CTB_THEME", "classic"), THEMES["classic"])
+THEME = THEMES.get(os.environ.get("CTB_THEME", "n8n"), THEMES["n8n"])
 
 UNFOLD = {
     "SITE_TITLE": "CTB",

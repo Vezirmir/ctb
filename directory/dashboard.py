@@ -27,6 +27,11 @@ def follow_up_badge(request):
     return _follow_ups_due().count() or ""
 
 
+def registration_badge(request):
+    """Companies that registered through the form and are not confirmed yet."""
+    return Participation.objects.filter(status=Participation.Status.REGISTERED).count() or ""
+
+
 def _breakdown(model, lookup):
     changelist = reverse("admin:directory_company_changelist")
     rows = (
@@ -52,6 +57,7 @@ def dashboard_callback(request, context):
         total=Count("id"),
         unassigned=Count("id", filter=Q(company__isnull=True)),
         review=Count("id", filter=Q(needs_review=True)),
+        invalid=Count("id", filter=Q(check_status=Email.Check.INVALID)),
     )
 
     context["kpis"] = [
@@ -63,7 +69,8 @@ def dashboard_callback(request, context):
          }},
         {"title": _("E-mail addresses"), "value": email_stats["total"], "icon": "alternate_email",
          "href": emails,
-         "footer": _("%(n)d without company") % {"n": email_stats["unassigned"]}},
+         "footer": _("%(n)d without company · %(invalid)d invalid") % {
+             "n": email_stats["unassigned"], "invalid": email_stats["invalid"]}},
         {"title": _("Contact persons"), "value": Contact.objects.count(), "icon": "contacts",
          "href": reverse("admin:directory_contact_changelist"),
          "footer": _("Management, procurement, sales")},
@@ -107,6 +114,20 @@ def dashboard_callback(request, context):
         ],
     }
     context["follow_ups_url"] = f"{participations}?follow_up=overdue"
+    context["registrations"] = {
+        "headers": [_("Company"), _("Event"), _("Participants"), _("Registered")],
+        "rows": [
+            [
+                _link(reverse("admin:directory_participation_change", args=[p.pk]), p.company.name),
+                p.event.name,
+                p.n,
+                timezone.localtime(p.registered_at).strftime("%d.%m.%Y %H:%M"),
+            ]
+            for p in Participation.objects.filter(registered_at__isnull=False)
+            .select_related("company", "event").annotate(n=Count("attendees"))
+            .order_by("-registered_at")[:8]
+        ],
+    }
     context["recent_companies"] = {
         "headers": [_("Company"), _("Country"), _("Added")],
         "rows": [

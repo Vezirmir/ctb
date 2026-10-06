@@ -13,7 +13,7 @@ from .importer import (
     Importer, context_from_path, parse_correspondence, parse_email_line, parse_person_line,
     read_zip,
 )
-from .models import Company, Contact, Country, Email, Industry
+from .models import Company, Contact, Country, Email, Industry, Participation
 
 COMPANY_HEADER = [
     "Название компании", "Сайт", "Номера телефонов", "Почтовые адреса (e-mail)",
@@ -829,3 +829,240 @@ class ReadOnlyUserTests(TestCase):
         self.assertEqual(self.client.get(
             reverse("admin:directory_participation_row_call", args=[self.p.pk])).status_code, 200)
         self.assertEqual(self.client.get(reverse("admin:directory_mailsettings_change", args=[1])).status_code, 403)
+
+
+class FakeResolver:
+    """DNS answers for the e-mail check without network access."""
+
+    MX = {"gmail.com": ["gmail-smtp-in.l.google.com."], "acme.de": ["mx.acme.de."],
+          "nullmx.com": ["."]}
+    A = {"webonly.com"}
+
+    def resolve(self, domain, record):
+        import dns.resolver
+        if record == "MX":
+            if domain in self.MX:
+                return [type("R", (), {"exchange": host})() for host in self.MX[domain]]
+            if domain in self.A or domain == "nomail.com":
+                raise dns.resolver.NoAnswer
+            raise dns.resolver.NXDOMAIN
+        if domain in self.A:
+            return ["1.2.3.4"]
+        raise dns.resolver.NoAnswer
+
+
+class EmailCheckTests(TestCase):
+    def setUp(self):
+        from unittest import mock
+        patcher = mock.patch("directory.email_check._resolver", return_value=FakeResolver())
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        self.company = Company.objects.create(name="ACME")
+        for address in ["anna@gmail.com", "sales@acme.de", "info@webonly.com", "x@nowhere-xyz.com",
+                        "y@nomail.com", "z@nullmx.com", "ivan@gmial.com", "broken@@acme.de",
+                        "boss@acme.con"]:
+            Email.objects.create(company=self.company, email=address)
+
+    def status(self, address):
+        email = Email.objects.get(email=address)
+        return email.check_status, email.check_note
+
+    def test_check_results(self):
+        from .email_check import check_emails
+        report = check_emails(Email.objects.all())
+        self.assertEqual(self.status("anna@gmail.com")[0], "valid")
+        self.assertEqual(self.status("sales@acme.de")[0], "valid")
+        self.assertEqual(self.status("info@webonly.com")[0], "valid")
+        self.assertEqual(self.status("x@nowhere-xyz.com"), ("invalid", "The domain does not exist"))
+        self.assertEqual(self.status("y@nomail.com"), ("invalid", "The domain has no mail server"))
+        self.assertEqual(self.status("z@nullmx.com")[0], "invalid")
+        self.assertEqual(self.status("ivan@gmial.com"), ("invalid", "The domain does not exist"))
+        self.assertEqual(self.status("broken@@acme.de")[0], "invalid")
+        self.assertEqual(self.status("boss@acme.con")[0], "invalid")
+        self.assertEqual((report.valid, report.invalid), (3, 6))
+
+    def test_typo_of_existing_domain_is_suspicious(self):
+        from .email_check import check_emails
+        FakeResolver.MX["gmial.com"] = ["mx.squatter.com."]
+        self.addCleanup(FakeResolver.MX.pop, "gmial.com")
+        check_emails(Email.objects.filter(email="ivan@gmial.com"))
+        self.assertEqual(self.status("ivan@gmial.com"), ("suspicious", "Did you mean gmail.com?"))
+
+    def test_without_dns_only_spelling_is_checked(self):
+        from unittest import mock
+        from .email_check import check_emails
+        with mock.patch("directory.email_check.domain_result", return_value=None):
+            report = check_emails(Email.objects.all())
+        self.assertTrue(report.dns_unavailable)
+        self.assertEqual(self.status("anna@gmail.com")[0], "")
+        self.assertEqual(self.status("broken@@acme.de")[0], "invalid")
+
+    def test_admin_buttons_and_invalid_addresses_not_used_for_sending(self):
+        from .mailing import recipients
+        admin_user = get_user_model().objects.create_superuser("admin", "a@x.com", "pw")
+        self.client.force_login(admin_user)
+        response = self.client.get(reverse("admin:directory_email_check_unchecked"), follow=True)
+        self.assertContains(response, "Address check: OK: 3")
+        self.assertEqual(Email.objects.filter(check_status="").count(), 0)
+        page = self.client.get(reverse("admin:directory_email_changelist") + "?check_status__exact=invalid")
+        self.assertContains(page, "nowhere-xyz.com")
+        self.assertNotContains(page, "anna@gmail.com")
+        self.assertNotIn("x@nowhere-xyz.com", recipients(self.company, "all"))
+        self.assertEqual(len(recipients(self.company, "all")), 3)
+        # Editing the address clears the old result.
+        email = Email.objects.get(email="x@nowhere-xyz.com")
+        self.client.post(reverse("admin:directory_email_change", args=[email.pk]), {
+            "email": "x@acme.de", "company": self.company.pk, "source": "manual",
+            "check_status": "invalid", "check_note": "The domain does not exist",
+        })
+        email.refresh_from_db()
+        self.assertEqual((email.email, email.check_status), ("x@acme.de", ""))
+
+
+class RegistrationTests(TestCase):
+    def setUp(self):
+        from .models import Event, Participation
+        translation.activate("en")
+        self.tr = Country.objects.create(name_en="Türkiye", name_tr="Türkiye", iso_code="TR")
+        self.de = Country.objects.create(name_en="Germany", name_tr="Almanya", iso_code="DE")
+        self.auto = Industry.objects.create(name_en="Automotive", name_tr="Otomotiv")
+        self.event = Event.objects.create(name="Bursa 2026", start_date=date(2026, 11, 3),
+                                          city="Bursa")
+        self.acme = Company.objects.create(name="ACME Otomotiv Ltd. Şti.", country=self.tr,
+                                           websites="www.acme.com.tr")
+        Email.objects.create(company=self.acme, email="info@acme.com.tr", source="list")
+        self.invited = Participation.objects.create(event=self.event, company=self.acme,
+                                                    status="invited")
+
+    def data(self, **overrides):
+        data = {
+            "company_name": "Brand New GmbH", "country": self.de.pk, "city": "Köln",
+            "website": "https://brand-new.de", "phone": "+49 221 000", "address": "",
+            "industries": [self.auto.pk], "description": "Car parts",
+            "role": "buyer", "wanted_industries": [self.auto.pk], "wanted_countries": [self.tr.pk],
+            "interests": "Brake pads", "max_meetings": "8", "consent": "on", "homepage": "",
+            "people-TOTAL_FORMS": "2", "people-INITIAL_FORMS": "0",
+            "people-MIN_NUM_FORMS": "1", "people-MAX_NUM_FORMS": "10",
+            "people-0-full_name": "Hans Müller", "people-0-position": "Purchasing",
+            "people-0-email": "Hans@brand-new.de", "people-0-phone": "",
+            "people-1-full_name": "Eva Klein", "people-1-position": "CEO",
+            "people-1-email": "eva@brand-new.de", "people-1-phone": "+49 1",
+        }
+        data.update(overrides)
+        return data
+
+    def test_public_pages_open_without_login(self):
+        url = self.event.registration_path()
+        for language in ("en", "tr"):
+            response = self.client.get(f"{url}?lang={language}")
+            self.assertEqual(response.status_code, 200)
+            self.assertContains(response, "Bursa 2026")
+        self.assertContains(self.client.get(url + "?lang=tr"), "Otomotiv")
+        personal = self.client.get(self.invited.registration_path())
+        self.assertContains(personal, 'value="ACME Otomotiv Ltd. Şti."')
+        self.assertEqual(self.client.get("/register/wrong-key/").status_code, 404)
+        self.assertEqual(self.client.get(f"{url}wrong-token/").status_code, 404)
+
+    def test_new_company_is_created_with_participants(self):
+        response = self.client.post(self.event.registration_path(), self.data())
+        self.assertRedirects(response, self.event.registration_path() + "?done=1")
+        company = Company.objects.get(name="Brand New GmbH")
+        self.assertEqual((company.country, company.city), (self.de, "Köln"))
+        self.assertEqual(company.website_list, ["https://brand-new.de"])
+        self.assertEqual(list(company.industries.all()), [self.auto])
+        p = company.participations.get()
+        self.assertEqual((p.event, p.status, p.role, p.max_meetings), (self.event, "registered", "buyer", 8))
+        self.assertIsNotNone(p.registered_at)
+        self.assertEqual(list(p.wanted_countries.all()), [self.tr])
+        self.assertEqual([a.full_name for a in p.attendees.all()], ["Hans Müller", "Eva Klein"])
+        self.assertEqual(sorted(company.emails.values_list("email", "source")),
+                         [("eva@brand-new.de", "registration"), ("hans@brand-new.de", "registration")])
+        self.assertEqual(company.contacts.count(), 2)
+        activity = p.activities.get()
+        self.assertEqual(activity.kind, "registration")
+        self.assertIn("New company created", activity.comment)
+
+    def test_existing_company_found_by_name_gets_new_data(self):
+        self.client.post(self.event.registration_path(), self.data(
+            company_name="Acme Otomotiv", country=self.tr.pk, website="acme.com.tr",
+            **{"people-TOTAL_FORMS": "1"}))
+        self.assertEqual(Company.objects.count(), 1)
+        self.acme.refresh_from_db()
+        self.assertEqual(self.acme.website_list, ["www.acme.com.tr"])  # same site not added twice
+        self.assertEqual(self.acme.phone_list, ["+49 221 000"])
+        self.assertEqual(self.acme.city, "Köln")
+        self.invited.refresh_from_db()
+        self.assertEqual(self.invited.status, "registered")
+        self.assertEqual(self.invited.attendees.count(), 1)
+        self.assertIn("Found by: company name", self.invited.activities.get().comment)
+
+    def test_existing_company_found_by_email_domain(self):
+        self.client.post(self.event.registration_path(), self.data(
+            company_name="Acme Automotive Group", website="",
+            **{"people-TOTAL_FORMS": "1", "people-0-email": "ali@acme.com.tr"}))
+        self.assertFalse(Company.objects.filter(name="Acme Automotive Group").exists())
+        self.assertEqual(self.acme.participations.get().attendees.get().email, "ali@acme.com.tr")
+        comment = self.acme.participations.get().activities.get().comment
+        self.assertIn("Name in the form: Acme Automotive Group", comment)
+
+    def test_personal_link_updates_and_can_be_sent_again(self):
+        url = self.invited.registration_path()
+        self.client.post(url, self.data(company_name="Other name"))
+        self.client.post(url, self.data(company_name="Other name", **{"people-TOTAL_FORMS": "1"}))
+        self.assertFalse(Company.objects.filter(name="Other name").exists())
+        self.invited.refresh_from_db()
+        self.assertEqual(self.invited.attendees.count(), 1)
+        self.assertEqual(self.invited.activities.count(), 2)
+        self.invited.status = "confirmed"
+        self.invited.save()
+        self.client.post(url, self.data())
+        self.invited.refresh_from_db()
+        self.assertEqual(self.invited.status, "confirmed")  # a confirmed company stays confirmed
+
+    def test_validation_and_spam(self):
+        url = self.event.registration_path()
+        response = self.client.post(url, self.data(consent="", **{"people-0-email": "not-an-email"}))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Please correct the fields marked in red.")
+        response = self.client.post(url, self.data(**{"people-TOTAL_FORMS": "0"}))
+        self.assertContains(response, "Please correct the fields marked in red.")
+        response = self.client.post(url, self.data(**{"people-1-email": "hans@brand-new.de"}))
+        self.assertContains(response, "already given for another participant")
+        self.client.post(url, self.data(homepage="http://spam"))
+        self.assertFalse(Company.objects.filter(name="Brand New GmbH").exists())
+        # A removed participant row is ignored even if it is incomplete.
+        self.client.post(url, self.data(**{"people-1-DELETE": "on", "people-1-email": ""}))
+        self.assertEqual(Company.objects.get(name="Brand New GmbH").participations.get()
+                         .attendees.count(), 1)
+
+    def test_closed_registration(self):
+        self.event.registration_open = False
+        self.event.save()
+        response = self.client.post(self.event.registration_path(), self.data())
+        self.assertContains(response, "Registration for this event is closed.")
+        self.assertFalse(Company.objects.filter(name="Brand New GmbH").exists())
+
+    def test_link_in_template_admin_and_dashboard(self):
+        from .mailing import compose, context_for
+        from .models import EmailTemplate
+        admin_user = get_user_model().objects.create_superuser("admin", "a@x.com", "pw")
+        template = EmailTemplate.objects.create(name="T", subject="S",
+                                                body="Register here: {registration_link}")
+        _subject, body = compose(template, context_for(self.invited, admin_user,
+                                                       "https://ctb.example.com/"), admin_user)
+        self.assertIn(f"https://ctb.example.com{self.invited.registration_path()}", body)
+        self.client.force_login(admin_user)
+        preview = self.client.get(reverse("admin:directory_emailtemplate_preview", args=[template.pk]))
+        self.assertContains(preview, f"http://testserver{self.invited.registration_path()}")
+        edit = self.client.get(reverse("admin:directory_emailtemplate_change", args=[template.pk]))
+        self.assertContains(edit, 'data-ctb-insert="{registration_link}"')
+        event_page = self.client.get(reverse("admin:directory_event_change", args=[self.event.pk]))
+        self.assertContains(event_page, self.event.registration_path())
+        self.client.post(self.event.registration_path(), self.data())
+        p = Participation.objects.get(company__name="Brand New GmbH")
+        page = self.client.get(reverse("admin:directory_participation_change", args=[p.pk]))
+        self.assertContains(page, "Hans Müller")
+        self.assertContains(page, p.registration_path())
+        dashboard = self.client.get(reverse("admin:index"))
+        self.assertContains(dashboard, "Latest registrations")
+        self.assertContains(dashboard, "Brand New GmbH")

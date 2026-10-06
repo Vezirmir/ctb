@@ -1,0 +1,12 @@
+{% extends "registration/base.html" %}
+{% load i18n %}
+{% block content %}
+<section class="card done">
+    <div class="check">✓</div>
+    <h2>{% translate "Thank you, your registration has been received." %}</h2>
+    <p>{% translate "We will contact you with the details and the meeting schedule." %}</p>
+    {% if participation %}
+        <p class="hint">{% translate "To change the data, open the same link from the invitation again." %}</p>
+    {% endif %}
+</section>
+{% endblock %}

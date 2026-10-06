@@ -1,9 +1,11 @@
 import datetime
+import secrets
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
+from django.urls import reverse
 from django.utils import timezone
 from django.utils.translation import get_language
 from django.utils.translation import gettext_lazy as _
@@ -140,6 +142,12 @@ class Email(models.Model):
         WEBSITE = "website", _("Company website")
         CTB_MAIL = "ctb_mail", _("CTB mailbox")
         MANUAL = "manual", _("Entered manually")
+        REGISTRATION = "registration", _("Registration form")
+
+    class Check(models.TextChoices):
+        VALID = "valid", _("OK")
+        SUSPICIOUS = "suspicious", _("Possible typo")
+        INVALID = "invalid", _("Invalid")
 
     company = models.ForeignKey(
         Company, verbose_name=_("company"), on_delete=models.CASCADE,
@@ -147,7 +155,7 @@ class Email(models.Model):
         help_text=_("Leave empty if the company is not known yet."),
     )
     email = models.EmailField(_("e-mail"))
-    source = models.CharField(_("source"), max_length=10, choices=Source.choices, default=Source.MANUAL)
+    source = models.CharField(_("source"), max_length=12, choices=Source.choices, default=Source.MANUAL)
     person_name = models.CharField(_("person"), max_length=200, blank=True)
     description = models.CharField(_("department / role"), max_length=500, blank=True)
     group = models.CharField(
@@ -163,6 +171,10 @@ class Email(models.Model):
         _("needs review"), default=False,
         help_text=_("The link to the company was guessed and should be checked."),
     )
+    check_status = models.CharField(_("check"), max_length=10, choices=Check.choices, blank=True,
+                                    help_text=_("Result of the address check. Empty: not checked."))
+    check_note = models.CharField(_("check result"), max_length=255, blank=True)
+    checked_at = models.DateTimeField(_("checked"), null=True, blank=True)
 
     class Meta:
         ordering = ["company", "source", "email"]
@@ -212,6 +224,14 @@ class Contact(models.Model):
             raise ValidationError(_("Enter a name or a position."))
 
 
+def new_event_key():
+    return secrets.token_urlsafe(9)
+
+
+def new_registration_token():
+    return secrets.token_urlsafe(12)
+
+
 class Event(models.Model):
     name = models.CharField(_("name"), max_length=255)
     start_date = models.DateField(_("start date"), null=True, blank=True)
@@ -236,6 +256,12 @@ class Event(models.Model):
         _("number of tables"), null=True, blank=True,
         help_text=_("Meetings held at the same time. Leave empty for no limit."),
     )
+    registration_open = models.BooleanField(
+        _("registration form open"), default=True,
+        help_text=_("Companies can register through the form link."),
+    )
+    registration_key = models.CharField(max_length=32, unique=True, editable=False,
+                                        default=new_event_key)
 
     class Meta:
         ordering = ["-start_date", "name"]
@@ -253,6 +279,9 @@ class Event(models.Model):
         if bool(self.break_start) != bool(self.break_end) or (
                 self.break_start and self.break_end <= self.break_start):
             raise ValidationError({"break_end": _("Enter both break times, the end after the start.")})
+
+    def registration_path(self):
+        return reverse("registration", args=[self.registration_key])
 
     @property
     def days(self):
@@ -298,6 +327,7 @@ class Participation(models.Model):
     class Status(models.TextChoices):
         SHORTLISTED = "shortlisted", _("To invite")
         INVITED = "invited", _("Invited")
+        REGISTERED = "registered", _("Registered")
         CONFIRMED = "confirmed", _("Confirmed")
         DECLINED = "declined", _("Declined")
         ATTENDED = "attended", _("Attended")
@@ -324,6 +354,12 @@ class Participation(models.Model):
         _("follow up on"), null=True, blank=True,
         help_text=_("When to write or call again."),
     )
+    registered_at = models.DateTimeField(
+        _("registered"), null=True, blank=True,
+        help_text=_("When the company filled in the registration form."),
+    )
+    registration_token = models.CharField(max_length=32, unique=True, editable=False,
+                                          default=new_registration_token)
 
     class Meta:
         ordering = ["event", "company"]
@@ -336,6 +372,31 @@ class Participation(models.Model):
     def __str__(self):
         return f"{self.company} @ {self.event}"
 
+    def registration_path(self):
+        return reverse("registration_personal",
+                       args=[self.event.registration_key, self.registration_token])
+
+
+class Attendee(models.Model):
+    """A person the company sends to the event (from the registration form or entered by hand)."""
+
+    participation = models.ForeignKey(
+        Participation, verbose_name=_("invitation"), on_delete=models.CASCADE,
+        related_name="attendees",
+    )
+    full_name = models.CharField(_("full name"), max_length=200)
+    position = models.CharField(_("position"), max_length=300, blank=True)
+    email = models.EmailField(_("e-mail"), blank=True)
+    phone = models.CharField(_("phone"), max_length=60, blank=True)
+
+    class Meta:
+        ordering = ["participation", "pk"]
+        verbose_name = _("participant")
+        verbose_name_plural = _("participants")
+
+    def __str__(self):
+        return self.full_name
+
 
 class Activity(models.Model):
     """One contact with an invited company: e-mail sent, call, reply received or note."""
@@ -345,12 +406,13 @@ class Activity(models.Model):
         CALL = "call", _("Call")
         REPLY = "reply", _("Reply received")
         NOTE = "note", _("Note")
+        REGISTRATION = "registration", _("Registration form")
 
     participation = models.ForeignKey(
         Participation, verbose_name=_("participation"), on_delete=models.CASCADE,
         related_name="activities",
     )
-    kind = models.CharField(_("type"), max_length=10, choices=Kind.choices)
+    kind = models.CharField(_("type"), max_length=12, choices=Kind.choices)
     happened_at = models.DateTimeField(_("date"), default=timezone.now)
     email = models.EmailField(_("e-mail"), blank=True)
     contact = models.ForeignKey(

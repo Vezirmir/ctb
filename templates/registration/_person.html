@@ -1,0 +1,15 @@
+{% load i18n %}
+<div class="person card-inner" data-person>
+    <div class="person-head">
+        <span class="person-title">{% translate "Participant" %}</span>
+        <button type="button" class="link-button" data-remove>{% translate "Remove" %}</button>
+    </div>
+    {{ person.non_field_errors }}
+    <div class="grid">
+        {% include "registration/_field.html" with field=person.full_name %}
+        {% include "registration/_field.html" with field=person.position %}
+        {% include "registration/_field.html" with field=person.email %}
+        {% include "registration/_field.html" with field=person.phone %}
+    </div>
+    <span class="hidden">{{ person.DELETE }}</span>
+</div>

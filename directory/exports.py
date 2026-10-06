@@ -198,7 +198,7 @@ def emails_to_xlsx_response(queryset):
         (_("E-mail"), 34), (_("Company"), 32), (_("Country"), 14), (_("Industries"), 22),
         (_("Source"), 16), (_("Person"), 26), (_("Department / role"), 32), (_("Group"), 24),
         (_("E-mails sent"), 12), (_("Last sent"), 12), (_("Replied"), 10),
-        (_("Needs review"), 12), (_("Notes"), 36),
+        (_("Needs review"), 12), (_("Address check"), 26), (_("Notes"), 36),
     ]
     ws.append([str(title) for title, _width in columns])
     for index, (_title, width) in enumerate(columns, start=1):
@@ -222,6 +222,8 @@ def emails_to_xlsx_response(queryset):
             e.last_sent_on,
             yes if e.replied else no,
             yes if e.needs_review else no,
+            ": ".join(v for v in (e.get_check_status_display() if e.check_status else "",
+                                  e.check_note) if v),
             e.notes,
         ])
         ws.cell(row=ws.max_row, column=10).number_format = "DD.MM.YYYY"

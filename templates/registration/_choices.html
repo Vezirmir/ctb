@@ -1,0 +1,9 @@
+<fieldset class="f wide">
+    <legend>{{ field.label }}</legend>
+    <div class="choices">
+        {% for option in field %}
+            <label class="choice">{{ option.tag }}<span>{{ option.choice_label }}</span></label>
+        {% endfor %}
+    </div>
+    {% for error in field.errors %}<p class="error">{{ error }}</p>{% endfor %}
+</fieldset>

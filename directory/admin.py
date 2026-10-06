@@ -9,10 +9,12 @@ from django.core.exceptions import PermissionDenied
 from django.db import models
 from django.db.models import Count, Exists, Max, OuterRef, Q, Subquery
 from django.shortcuts import get_object_or_404, redirect
+from django.template.loader import render_to_string
 from django.template.response import TemplateResponse
 from django.urls import path, reverse
 from django.utils import timezone
 from django.utils.html import format_html, format_html_join
+from django.utils.safestring import mark_safe
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils.translation import gettext_lazy as _
 from unfold.admin import ModelAdmin, StackedInline, TabularInline
@@ -25,21 +27,22 @@ from .exports import (
     companies_to_xlsx_response, emails_to_xlsx_response, import_template_response,
     schedule_to_xlsx_response,
 )
+from .email_check import check_emails, report_message
 from .forms import (
     ActivityForm, AddToEventForm, ImportForm, MailSettingsForm, SendInvitationsForm, SignatureForm,
 )
 from .importer import Importer, read_zip
 from .invitations import log_activity
 from .mailing import (
-    MAX_PER_SEND, MailNotConfigured, compose, context_for, placeholder_help, recipients,
+    MAX_PER_SEND, PLACEHOLDERS, MailNotConfigured, compose, context_for, recipients,
     send_invitations, send_test, signature_of,
 )
 from .matchmaking import (
     build_schedule, clear_schedule, create_meetings, preselect, schedule_rows, suggest,
 )
 from .models import (
-    Activity, Company, Contact, Country, Email, EmailTemplate, Event, Industry, MailSettings,
-    Meeting, Participation, Tag, TemplateAttachment, UserProfile,
+    Activity, Attendee, Company, Contact, Country, Email, EmailTemplate, Event, Industry,
+    MailSettings, Meeting, Participation, Tag, TemplateAttachment, UserProfile,
 )
 
 admin.site.site_header = _("CTB — B2B company database")
@@ -51,17 +54,37 @@ SOURCE_LABELS = {
     Email.Source.WEBSITE: "success",
     Email.Source.CTB_MAIL: "warning",
     Email.Source.MANUAL: "primary",
+    Email.Source.REGISTRATION: "success",
 }
 CATEGORY_LABELS = {
     Contact.Category.MANAGEMENT: "primary",
     Contact.Category.PROCUREMENT: "success",
     Contact.Category.SALES: "info",
 }
+CHECK_LABELS = {
+    Email.Check.VALID: "success",
+    Email.Check.SUSPICIOUS: "warning",
+    Email.Check.INVALID: "danger",
+}
 STATUS_LABELS = {
     Meeting.Status.PLANNED: "info",
     Meeting.Status.HELD: "success",
     Meeting.Status.CANCELLED: "danger",
 }
+
+
+def site_url(request):
+    """https://host of the current request, for links in e-mails."""
+    return request.build_absolute_uri("/").rstrip("/")
+
+
+def copy_link(url):
+    """Full link with a copy button (admin.js turns the path into an absolute address)."""
+    return format_html(
+        '<span class="ctb-link"><a href="{0}" target="_blank" rel="noopener" data-ctb-link>{0}</a>'
+        '<button type="button" class="ctb-copy" data-ctb-copy="{0}" title="{1}">'
+        '<span class="material-symbols-outlined">content_copy</span></button></span>',
+        url, _("Copy link"))
 
 
 def initials(text):
@@ -136,7 +159,7 @@ class EmailInline(TabularInline):
     extra = 0
     tab = True
     fields = ["email", "source", "person_name", "description", "sent_count", "last_sent_on",
-              "replied", "needs_review"]
+              "replied", "needs_review", "check_status"]
 
 
 class ContactInline(TabularInline):
@@ -330,13 +353,17 @@ class CompanyAdmin(ExportPermissionMixin, ModelAdmin):
         return TemplateResponse(request, "admin/directory/company/import.html", context)
 
 
+CHECK_LIMIT = 3000  # addresses per click, so the page answers within the server time limit
+
+
 @admin.register(Email)
 class EmailAdmin(ExportPermissionMixin, ModelAdmin):
     list_display = ["email", "company", "source_label", "person_name", "sent_count", "last_sent_on",
-                    "replied", "needs_review"]
+                    "replied", "needs_review", "check_label"]
     list_filter = [
         ("company", admin.EmptyFieldListFilter),
         ("source", ChoicesDropdownFilter),
+        ("check_status", ChoicesDropdownFilter),
         "replied",
         "needs_review",
         ("company__country", RelatedDropdownFilter),
@@ -347,17 +374,56 @@ class EmailAdmin(ExportPermissionMixin, ModelAdmin):
     autocomplete_fields = ["company"]
     list_select_related = ["company"]
     date_hierarchy = "last_sent_on"
-    actions = ["export_xlsx"]
+    actions = ["export_xlsx", "check_selected"]
+    actions_list = ["check_unchecked"]
+    readonly_fields = ["checked_at"]
     fieldsets = [
         (None, {"fields": [("email", "company"), ("source", "person_name"), ("description", "group")]}),
         (_("CTB correspondence"), {"fields": [("sent_count", "last_sent_on"),
                                               ("replied", "needs_review"), "correspondence"]}),
+        (_("Address check"), {"fields": [("check_status", "check_note"), "checked_at"]}),
         (_("Notes"), {"fields": ["notes"]}),
     ]
 
     @display(description=_("source"), label=SOURCE_LABELS, ordering="source")
     def source_label(self, obj):
         return obj.source, obj.get_source_display()
+
+    @display(description=_("check"), ordering="check_status")
+    def check_label(self, obj):
+        if not obj.check_status:
+            return "—"
+        label = render_to_string("unfold/helpers/label.html", {
+            "text": obj.get_check_status_display(), "variant": CHECK_LABELS[obj.check_status]})
+        note = obj.check_note if obj.check_status != Email.Check.VALID else ""
+        return format_html('<div style="min-width:9rem">{}<div class="text-subtle text-xs mt-1">{}</div></div>',
+                           mark_safe(label), note)
+
+    def save_model(self, request, obj, form, change):
+        if change and "email" in form.changed_data and "check_status" not in form.changed_data:
+            obj.check_status, obj.check_note, obj.checked_at = "", "", None
+        super().save_model(request, obj, form, change)
+
+    def _run_check(self, request, queryset):
+        report = check_emails(queryset)
+        if report.dns_unavailable:
+            messages.warning(request, _("Domain lookups do not work on this server; only the "
+                                        "spelling was checked."))
+        messages.success(request, _("Address check: %(result)s.") % {"result": report_message(report)})
+
+    @admin.action(description=_("Check selected e-mail addresses"), permissions=["change"])
+    def check_selected(self, request, queryset):
+        self._run_check(request, queryset[:CHECK_LIMIT])
+
+    @action(description=_("Check unchecked addresses"), url_path="check-unchecked",
+            icon="verified", permissions=["change"])
+    def check_unchecked(self, request):
+        queryset = Email.objects.filter(check_status="")
+        left = max(queryset.count() - CHECK_LIMIT, 0)
+        self._run_check(request, queryset[:CHECK_LIMIT])
+        if left:
+            messages.info(request, _("%(n)d addresses are left: click the button again.") % {"n": left})
+        return redirect("admin:directory_email_changelist")
 
     @admin.action(description=_("Export selected e-mails to Excel"), permissions=["export"])
     def export_xlsx(self, request, queryset):
@@ -398,8 +464,9 @@ ROLE_LABELS = {
     Participation.Role.BOTH: "primary",
 }
 PARTICIPATION_STATUS_LABELS = {
-    Participation.Status.SHORTLISTED: "primary",
+    Participation.Status.SHORTLISTED: "default",
     Participation.Status.INVITED: "warning",
+    Participation.Status.REGISTERED: "primary",
     Participation.Status.CONFIRMED: "info",
     Participation.Status.DECLINED: "danger",
     Participation.Status.ATTENDED: "success",
@@ -433,6 +500,7 @@ class EventAdmin(ModelAdmin):
     date_hierarchy = "start_date"
     inlines = [EventParticipationInline, EventMeetingInline]
     actions_detail = ["invitations", "matches", "schedule"]
+    readonly_fields = ["registration_link"]
     formfield_overrides = {
         models.TimeField: {"widget": UnfoldAdminSingleTimeWidget(format="%H:%M")},
         models.TextField: {"widget": UnfoldAdminTextareaWidget(attrs={"rows": 3})},
@@ -442,7 +510,17 @@ class EventAdmin(ModelAdmin):
                                  "description"]}),
         (_("Meeting schedule"), {"fields": [("day_start", "day_end"), ("break_start", "break_end"),
                                             ("meeting_minutes", "tables")]}),
+        (_("Registration form"), {"fields": ["registration_open", "registration_link"]}),
     ]
+
+    @display(description=_("general registration link"))
+    def registration_link(self, obj):
+        if not obj.pk:
+            return _("Available after saving.")
+        return format_html("{}<div class=\"text-xs text-subtle mt-1\">{}</div>",
+                           copy_link(obj.registration_path()),
+                           _("For anyone (website, social media). Invitation e-mails contain a "
+                             "personal link for each company: {registration_link}."))
 
     def get_queryset(self, request):
         return (
@@ -606,6 +684,13 @@ class ActivityInline(TabularInline):
         return formset
 
 
+class AttendeeInline(TabularInline):
+    model = Attendee
+    extra = 0
+    tab = True
+    fields = ["full_name", "position", "email", "phone"]
+
+
 def _last_activity(kind, field):
     return Subquery(
         Activity.objects.filter(participation=OuterRef("pk"), kind=kind)
@@ -635,9 +720,11 @@ class ParticipationAdmin(ModelAdmin):
     actions = ["send_invitations", "log_invitation_emails", "mark_confirmed", "mark_declined",
                "mark_attended"]
     actions_row = ["row_email", "row_call", "row_note"]
-    inlines = [ActivityInline]
+    inlines = [AttendeeInline, ActivityInline]
+    readonly_fields = ["registered_at", "registration_link"]
     fields = [("event", "company"), ("status", "next_action_on"), ("role", "max_meetings"),
-              ("wanted_industries", "wanted_countries"), "interests"]
+              ("wanted_industries", "wanted_countries"), "interests",
+              ("registered_at", "registration_link")]
     formfield_overrides = {models.TextField: {"widget": UnfoldAdminTextareaWidget(attrs={"rows": 2})}}
 
     def get_queryset(self, request):
@@ -669,6 +756,12 @@ class ParticipationAdmin(ModelAdmin):
         formset.save_m2m()
 
     # columns --------------------------------------------------------------------------
+
+    @display(description=_("registration form link"))
+    def registration_link(self, obj):
+        if not obj.pk:
+            return _("Available after saving.")
+        return copy_link(obj.registration_path())
 
     @display(description=_("company"), header=True, ordering="company__name")
     def company_header(self, obj):
@@ -771,7 +864,8 @@ class ParticipationAdmin(ModelAdmin):
             template, mode = form.cleaned_data["template"], form.cleaned_data["mode"]
             if "send" in request.POST:
                 try:
-                    report = send_invitations(template, list(queryset), request.user, mode)
+                    report = send_invitations(template, list(queryset), request.user, mode,
+                                              site_url(request))
                 except MailNotConfigured as exc:
                     messages.error(request, str(exc))
                     return redirect("admin:directory_mailsettings_changelist")
@@ -786,7 +880,8 @@ class ParticipationAdmin(ModelAdmin):
                 return None
             first = queryset.first()
             if first:
-                subject, body = compose(template, context_for(first, request.user), request.user)
+                subject, body = compose(template, context_for(first, request.user, site_url(request)),
+                                        request.user)
                 preview = {"company": first.company, "subject": subject, "body": body,
                            "attachments": list(template.attachments.all())}
             rows = [(p, recipients(p.company, mode)) for p in queryset]
@@ -878,9 +973,11 @@ class EmailTemplateAdmin(ModelAdmin):
 
     def get_form(self, request, obj=None, **kwargs):
         form = super().get_form(request, obj, **kwargs)
-        form.base_fields["body"].help_text = _(
-            "Placeholders: %(list)s. Your signature is added at the end automatically."
-        ) % {"list": placeholder_help()}
+        form.base_fields["body"].help_text = format_html(
+            "{}<div class=\"ctb-placeholders\">{}</div>",
+            _("Click to insert into the text. Your signature is added at the end automatically."),
+            format_html_join("", '<button type="button" data-ctb-insert="{{{}}}" title="{}">{}</button>',
+                             ((key, label, label) for key, label in PLACEHOLDERS)))
         form.base_fields["subject"].help_text = _("Placeholders can be used here too.")
         return form
 
@@ -899,7 +996,8 @@ class EmailTemplateAdmin(ModelAdmin):
         if sample is None:
             messages.warning(request, _("Add a company to an event first to see a preview."))
             return redirect("admin:directory_emailtemplate_change", template.pk)
-        subject, body = compose(template, context_for(sample, request.user), request.user)
+        subject, body = compose(template, context_for(sample, request.user, site_url(request)),
+                                request.user)
         context = {
             **self.admin_site.each_context(request),
             "opts": self.model._meta,
@@ -925,7 +1023,7 @@ class EmailTemplateAdmin(ModelAdmin):
             messages.warning(request, _("Add a company to an event first to see a preview."))
         else:
             try:
-                send_test(template, sample, request.user)
+                send_test(template, sample, request.user, site_url(request))
             except MailNotConfigured as exc:
                 messages.error(request, str(exc))
                 return redirect("admin:directory_mailsettings_changelist")

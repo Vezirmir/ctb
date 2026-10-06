@@ -24,6 +24,7 @@ PLACEHOLDERS = [
     ("event_city", _lazy("event city")),
     ("country", _lazy("company's country")),
     ("sender", _lazy("your name")),
+    ("registration_link", _lazy("registration form link, personal for each company")),
 ]
 
 # Which addresses to prefer when only one e-mail per company is sent.
@@ -33,10 +34,6 @@ SOURCE_PREFERENCE = [Email.Source.LIST, Email.Source.WEBSITE, Email.Source.MANUA
 
 class MailNotConfigured(Exception):
     pass
-
-
-def placeholder_help():
-    return ", ".join(f"{{{key}}} — {label}" for key, label in PLACEHOLDERS)
 
 
 def _event_dates(event):
@@ -59,7 +56,8 @@ def _contact_name(company):
     return company.name
 
 
-def context_for(participation, user):
+def context_for(participation, user, base_url=""):
+    """Placeholder values; base_url is the site address, e.g. https://ctb.pythonanywhere.com."""
     company, event = participation.company, participation.event
     return {
         "company": company.name,
@@ -69,6 +67,7 @@ def context_for(participation, user):
         "event_city": event.city,
         "country": str(company.country or ""),
         "sender": (user.get_full_name() or user.get_username()) if user else "",
+        "registration_link": base_url.rstrip("/") + participation.registration_path(),
     }
 
 
@@ -92,11 +91,13 @@ def compose(template, context, user):
 
 
 def recipients(company, mode):
-    emails = list(company.emails.all())
+    """Addresses to send to; ones the address check found invalid are left out."""
+    emails = [e for e in company.emails.all() if e.check_status != Email.Check.INVALID]
     if mode == "all":
         return [e.email for e in emails]
-    emails.sort(key=lambda e: SOURCE_PREFERENCE.index(e.source)
-                if e.source in SOURCE_PREFERENCE else len(SOURCE_PREFERENCE))
+    emails.sort(key=lambda e: (e.check_status == Email.Check.SUSPICIOUS,
+                               SOURCE_PREFERENCE.index(e.source)
+                               if e.source in SOURCE_PREFERENCE else len(SOURCE_PREFERENCE)))
     return [emails[0].email] if emails else []
 
 
@@ -114,8 +115,8 @@ def mail_connection():
     return connection, mail
 
 
-def build_message(template, participation, user, to, connection, mail):
-    subject, body = compose(template, context_for(participation, user), user)
+def build_message(template, participation, user, to, connection, mail, base_url=""):
+    subject, body = compose(template, context_for(participation, user, base_url), user)
     sender = mail.from_email or settings.DEFAULT_FROM_EMAIL
     if mail.from_name:
         sender = f"{mail.from_name} <{sender}>"
@@ -137,7 +138,7 @@ class SendReport:
     failed: list = field(default_factory=list)     # (company, error)
 
 
-def send_invitations(template, participations, user, mode="first"):
+def send_invitations(template, participations, user, mode="first", base_url=""):
     """Send the template to each company and record it in the invitation history."""
     connection, mail = mail_connection()
     report = SendReport()
@@ -150,7 +151,8 @@ def send_invitations(template, participations, user, mode="first"):
                 report.skipped.append(company)
                 continue
             try:
-                build_message(template, participation, user, to, connection, mail).send()
+                build_message(template, participation, user, to, connection, mail,
+                              base_url).send()
             except Exception as exc:  # SMTP errors vary a lot; report them per company
                 report.failed.append((company, str(exc)))
                 continue
@@ -163,9 +165,10 @@ def send_invitations(template, participations, user, mode="first"):
     return report
 
 
-def send_test(template, participation, user):
+def send_test(template, participation, user, base_url=""):
     """Send the template to the current user's own address."""
     connection, mail = mail_connection()
-    message = build_message(template, participation, user, [user.email], connection, mail)
+    message = build_message(template, participation, user, [user.email], connection, mail,
+                            base_url)
     message.subject = f"[TEST] {message.subject}"
     message.send()

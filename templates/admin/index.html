@@ -39,6 +39,12 @@
         {% endcomponent %}
     {% endif %}
 
+    {% if registrations.rows %}
+        {% component "unfold/components/card.html" with title=_("Latest registrations") title_icon="how_to_reg" %}
+            {% component "unfold/components/table.html" with table=registrations card_included=1 striped=1 %}{% endcomponent %}
+        {% endcomponent %}
+    {% endif %}
+
     <div class="grid lg:grid-cols-2 gap-6">
         {% component "unfold/components/card.html" with title=_("Companies by country") title_icon="public" %}
             {% component "unfold/components/table.html" with table=by_country card_included=1 striped=1 %}{% endcomponent %}

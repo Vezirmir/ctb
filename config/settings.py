@@ -6,6 +6,7 @@ from pathlib import Path
 import dj_database_url
 from django.templatetags.static import static
 from django.urls import reverse_lazy
+from django.utils.text import format_lazy
 from django.utils.translation import gettext_lazy as _
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -215,7 +216,8 @@ UNFOLD = {
     "SHOW_LANGUAGES": True,
     "SHOW_BACK_BUTTON": True,
     **({"THEME": THEME["mode"]} if THEME["mode"] else {}),
-    "SCRIPTS": [(lambda request, path=path: static(path)) for path in THEME.get("scripts", [])],
+    "SCRIPTS": [(lambda request, path=path: static(path))
+                for path in THEME.get("scripts", []) + ["directory/admin.js"]],
     "DASHBOARD_CALLBACK": "directory.dashboard.dashboard_callback",
     "STYLES": [lambda request: static("directory/admin.css")] + [
         (lambda request, path=path: path if path.startswith("https://") else static(path))
@@ -252,6 +254,10 @@ UNFOLD = {
                     {"title": _("Invitations"), "icon": "forward_to_inbox",
                      "link": _changelist("participation"),
                      "badge": "directory.dashboard.follow_up_badge", "badge_variant": "danger"},
+                    {"title": _("Registrations"), "icon": "how_to_reg",
+                     "link": format_lazy("{}?status__exact=registered",
+                                         _changelist("participation")),
+                     "badge": "directory.dashboard.registration_badge", "badge_variant": "primary"},
                     {"title": _("Invitation templates"), "icon": "drafts",
                      "link": _changelist("emailtemplate")},
                     {"title": _("My signature"), "icon": "signature",

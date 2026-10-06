@@ -1,0 +1,103 @@
+{% extends "registration/base.html" %}
+{% load i18n %}
+
+{% block content %}
+{% if participation %}
+    <p class="note">{% blocktranslate with company=participation.company.name %}This is the personal registration link of {{ company }}. Please check the data below, correct it if needed and add the participants.{% endblocktranslate %}</p>
+{% endif %}
+
+<form method="post" novalidate>
+    {% csrf_token %}
+    {% if form.errors or formset.non_form_errors %}
+        <div class="alert">
+            {% translate "Please correct the fields marked in red." %}
+            {% for error in formset.non_form_errors %}<br>{{ error }}{% endfor %}
+        </div>
+    {% endif %}
+
+    <section class="card">
+        <h2><span class="num">1</span>{% translate "Company" %}</h2>
+        <div class="grid">
+            {% include "registration/_field.html" with field=form.company_name wide=1 %}
+            {% include "registration/_field.html" with field=form.country %}
+            {% include "registration/_field.html" with field=form.other_country %}
+            {% include "registration/_field.html" with field=form.city %}
+            {% include "registration/_field.html" with field=form.website %}
+            {% include "registration/_field.html" with field=form.phone %}
+            {% include "registration/_field.html" with field=form.address %}
+            {% include "registration/_choices.html" with field=form.industries %}
+            {% include "registration/_field.html" with field=form.description wide=1 %}
+        </div>
+        <div class="trap" aria-hidden="true">{{ form.homepage }}</div>
+    </section>
+
+    <section class="card">
+        <h2><span class="num">2</span>{% translate "Participants" %}</h2>
+        <p class="hint">{% translate "Who will come to the event. You can add several people." %}</p>
+        {{ formset.management_form }}
+        <div data-people>
+            {% for person in formset %}{% include "registration/_person.html" %}{% endfor %}
+        </div>
+        <template id="person-template">{% with person=formset.empty_form %}{% include "registration/_person.html" %}{% endwith %}</template>
+        <button type="button" class="button secondary" data-add>+ {% translate "Add participant" %}</button>
+    </section>
+
+    <section class="card">
+        <h2><span class="num">3</span>{% translate "Meetings" %}</h2>
+        <div class="grid">
+            {% include "registration/_field.html" with field=form.role %}
+            {% include "registration/_field.html" with field=form.max_meetings %}
+            {% include "registration/_choices.html" with field=form.wanted_industries %}
+            {% include "registration/_choices.html" with field=form.wanted_countries %}
+            {% include "registration/_field.html" with field=form.interests wide=1 %}
+        </div>
+    </section>
+
+    <section class="card">
+        <label class="consent{% if form.consent.errors %} has-error{% endif %}">{{ form.consent }}<span>{{ form.consent.label }} <span class="req">*</span></span></label>
+        {% for error in form.consent.errors %}<p class="error">{{ error }}</p>{% endfor %}
+        <button type="submit" class="button primary">{% translate "Send registration" %}</button>
+    </section>
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+    var list = document.querySelector("[data-people]");
+    var total = document.getElementById("id_people-TOTAL_FORMS");
+    var max = parseInt(document.getElementById("id_people-MAX_NUM_FORMS").value, 10);
+    var template = document.getElementById("person-template").innerHTML;
+
+    function visible() {
+        return list.querySelectorAll("[data-person]:not(.removed)").length;
+    }
+    function refresh() {
+        var count = visible();
+        list.querySelectorAll("[data-person]").forEach(function (row) {
+            row.querySelector("[data-remove]").hidden = count <= 1;
+        });
+        document.querySelector("[data-add]").hidden = count >= max;
+    }
+    document.querySelector("[data-add]").addEventListener("click", function () {
+        var index = parseInt(total.value, 10);
+        list.insertAdjacentHTML("beforeend", template.replace(/__prefix__/g, index));
+        total.value = index + 1;
+        refresh();
+        list.lastElementChild.querySelector("input").focus();
+    });
+    list.addEventListener("click", function (event) {
+        var button = event.target.closest("[data-remove]");
+        if (!button) return;
+        var row = button.closest("[data-person]");
+        row.querySelector("input[name$='-DELETE']").checked = true;
+        row.classList.add("removed");
+        refresh();
+    });
+    list.querySelectorAll("input[name$='-DELETE']:checked").forEach(function (box) {
+        box.closest("[data-person]").classList.add("removed");
+    });
+    refresh();
+})();
+</script>
+{% endblock %}

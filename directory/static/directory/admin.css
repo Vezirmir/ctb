@@ -119,3 +119,53 @@
         order: -1;
     }
 }
+
+/* Copyable links (registration form) */
+.ctb-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    max-width: 100%;
+}
+.ctb-link a {
+    overflow-wrap: anywhere;
+    color: var(--color-primary-600);
+}
+.ctb-copy {
+    display: inline-flex;
+    padding: 2px;
+    border-radius: 6px;
+    color: var(--color-base-500);
+    cursor: pointer;
+}
+.ctb-copy:hover {
+    color: var(--color-primary-600);
+}
+.ctb-copy .material-symbols-outlined {
+    font-size: 18px;
+}
+
+/* Placeholder chips under the template text */
+.ctb-placeholders {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 8px;
+}
+.ctb-placeholders button {
+    padding: 2px 10px;
+    border: 1px solid var(--color-base-300);
+    border-radius: 999px;
+    font-size: 12px;
+    line-height: 20px;
+    color: var(--color-base-700);
+    cursor: pointer;
+}
+.ctb-placeholders button:hover {
+    border-color: var(--color-primary-600);
+    color: var(--color-primary-600);
+}
+.dark .ctb-placeholders button {
+    border-color: var(--color-base-700);
+    color: var(--color-base-300);
+}

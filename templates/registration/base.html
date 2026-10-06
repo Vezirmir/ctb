@@ -1,0 +1,36 @@
+{% load i18n static %}<!doctype html>
+<html lang="{{ language|default:'en' }}">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="robots" content="noindex">
+    <title>{% block title %}{% translate "Registration" %} · {{ event.name }}{% endblock %}</title>
+    <link rel="stylesheet" href="{% static 'directory/registration.css' %}">
+</head>
+<body>
+<header class="top">
+    <div class="wrap top-row">
+        <span class="brand"><span class="mark">CTB</span><span class="brand-name">Catch The Business</span></span>
+        <nav class="langs">
+            {% for code, name in languages %}
+                <a href="?lang={{ code }}" {% if code == language %}aria-current="true"{% endif %}>{{ code|upper }}</a>
+            {% endfor %}
+        </nav>
+    </div>
+</header>
+<main class="wrap">
+    <section class="event">
+        <p class="eyebrow">{% translate "Registration" %}</p>
+        <h1>{{ event.name }}</h1>
+        <p class="meta">
+            {% if event.start_date %}{{ event.start_date|date:"d.m.Y" }}{% if event.end_date and event.end_date != event.start_date %} – {{ event.end_date|date:"d.m.Y" }}{% endif %}{% endif %}
+            {% if event.city %} · {{ event.city }}{% endif %}{% if event.country %}, {{ event.country }}{% endif %}
+        </p>
+        {% if event.description %}<p class="lead">{{ event.description|linebreaksbr }}</p>{% endif %}
+    </section>
+    {% block content %}{% endblock %}
+</main>
+<footer class="wrap foot">© CTB · Catch The Business</footer>
+{% block scripts %}{% endblock %}
+</body>
+</html>

@@ -107,14 +107,22 @@ msgstr "Notlar"
 msgid "File"
 msgstr "Dosya"
 
-msgid "A .zip archive with folders Industry/Country/file.xlsx, or a single .xlsx file."
-msgstr "Sektör/Ülke/dosya.xlsx klasörlerini içeren bir .zip arşivi veya tek bir .xlsx dosyası."
+msgid ""
+"A .zip archive with folders Industry/Country/file.xlsx, or a single .xlsx "
+"file."
+msgstr ""
+"Sektör/Ülke/dosya.xlsx klasörlerini içeren bir .zip arşivi veya tek bir "
+".xlsx dosyası."
 
 msgid "Industry"
 msgstr "Sektör"
 
-msgid "For a single .xlsx file. If empty, it is taken from the file name “Industry - Country.xlsx”."
-msgstr "Tek bir .xlsx dosyası için. Boş bırakılırsa “Sektör - Ülke.xlsx” dosya adından alınır."
+msgid ""
+"For a single .xlsx file. If empty, it is taken from the file name “Industry "
+"- Country.xlsx”."
+msgstr ""
+"Tek bir .xlsx dosyası için. Boş bırakılırsa “Sektör - Ülke.xlsx” dosya "
+"adından alınır."
 
 msgid "For a single .xlsx file."
 msgstr "Tek bir .xlsx dosyası için."
@@ -123,16 +131,30 @@ msgid "Upload a .zip or .xlsx file."
 msgstr "Bir .zip veya .xlsx dosyası yükleyin."
 
 #, python-format
-msgid "Files: %(files)d. Companies: %(created)d new, %(updated)d updated. E-mails: %(emails)d new. Contact persons: %(contacts)d new. E-mails without company: %(unassigned)d new."
-msgstr "Dosyalar: %(files)d. Firmalar: %(created)d yeni, %(updated)d güncellendi. E-postalar: %(emails)d yeni. İrtibat kişileri: %(contacts)d yeni. Firmasız e-postalar: %(unassigned)d yeni."
+msgid ""
+"Files: %(files)d. Companies: %(created)d new, %(updated)d updated. E-mails: "
+"%(emails)d new. Contact persons: %(contacts)d new. E-mails without company: "
+"%(unassigned)d new."
+msgstr ""
+"Dosyalar: %(files)d. Firmalar: %(created)d yeni, %(updated)d güncellendi. "
+"E-postalar: %(emails)d yeni. İrtibat kişileri: %(contacts)d yeni. Firmasız "
+"e-postalar: %(unassigned)d yeni."
 
 #, python-format
-msgid "New country “%(name)s” was created; please add its English and Turkish names."
-msgstr "Yeni ülke “%(name)s” oluşturuldu; lütfen İngilizce ve Türkçe adlarını ekleyin."
+msgid ""
+"New country “%(name)s” was created; please add its English and Turkish "
+"names."
+msgstr ""
+"Yeni ülke “%(name)s” oluşturuldu; lütfen İngilizce ve Türkçe adlarını "
+"ekleyin."
 
 #, python-format
-msgid "New industry “%(name)s” was created; please add its English and Turkish names."
-msgstr "Yeni sektör “%(name)s” oluşturuldu; lütfen İngilizce ve Türkçe adlarını ekleyin."
+msgid ""
+"New industry “%(name)s” was created; please add its English and Turkish "
+"names."
+msgstr ""
+"Yeni sektör “%(name)s” oluşturuldu; lütfen İngilizce ve Türkçe adlarını "
+"ekleyin."
 
 #, python-format
 msgid "%(file)s: not a readable Excel file."
@@ -143,7 +165,8 @@ msgid "%(file)s: no company list found (a “Company name” column is required)
 msgstr "%(file)s: firma listesi bulunamadı (“Firma adı” sütunu gerekli)."
 
 #, python-format
-msgid "%(file)s, sheet %(sheet)s, row %(row)d: skipped, company name is empty."
+msgid ""
+"%(file)s, sheet %(sheet)s, row %(row)d: skipped, company name is empty."
 msgstr "%(file)s, sayfa %(sheet)s, satır %(row)d: atlandı, firma adı boş."
 
 msgid "The archive is too large."
@@ -162,7 +185,9 @@ msgid "name (Russian)"
 msgstr "ad (Rusça)"
 
 msgid "Used to match folder names and spreadsheets during import."
-msgstr "İçe aktarma sırasında klasör adlarını ve tabloları eşleştirmek için kullanılır."
+msgstr ""
+"İçe aktarma sırasında klasör adlarını ve tabloları eşleştirmek için "
+"kullanılır."
 
 msgid "ISO code"
 msgstr "ISO kodu"
@@ -419,8 +444,15 @@ msgstr "Dosyalar"
 msgid "Warnings"
 msgstr "Uyarılar"
 
-msgid "Upload the whole folder as a .zip archive: inside it, each list must be in <code>Industry/Country/file.xlsx</code>. The industry and country are taken from the folder names. Importing the same files again does not create duplicates."
-msgstr "Klasörün tamamını .zip arşivi olarak yükleyin: içinde her liste <code>Sektör/Ülke/dosya.xlsx</code> yolunda olmalıdır. Sektör ve ülke klasör adlarından alınır. Aynı dosyaları tekrar içe aktarmak kopya oluşturmaz."
+msgid ""
+"Upload the whole folder as a .zip archive: inside it, each list must be in "
+"<code>Industry/Country/file.xlsx</code>. The industry and country are taken "
+"from the folder names. Importing the same files again does not create "
+"duplicates."
+msgstr ""
+"Klasörün tamamını .zip arşivi olarak yükleyin: içinde her liste "
+"<code>Sektör/Ülke/dosya.xlsx</code> yolunda olmalıdır. Sektör ve ülke klasör"
+" adlarından alınır. Aynı dosyaları tekrar içe aktarmak kopya oluşturmaz."
 
 msgid "Language"
 msgstr "Dil"
@@ -428,8 +460,12 @@ msgstr "Dil"
 msgid "The form could not be sent"
 msgstr "Form gönderilemedi"
 
-msgid "Reload the page (Ctrl+F5) and try again. If it happens again, send this message to the administrator:"
-msgstr "Sayfayı yenileyin (Ctrl+F5) ve tekrar deneyin. Tekrar olursa bu mesajı yöneticiye gönderin:"
+msgid ""
+"Reload the page (Ctrl+F5) and try again. If it happens again, send this "
+"message to the administrator:"
+msgstr ""
+"Sayfayı yenileyin (Ctrl+F5) ve tekrar deneyin. Tekrar olursa bu mesajı "
+"yöneticiye gönderin:"
 
 msgid "Back to the site"
 msgstr "Siteye dön"
@@ -503,14 +539,26 @@ msgstr "Firma ekle"
 msgid "E-mails without company"
 msgstr "Firmasız e-postalar"
 
-msgid "Upload the whole folder as a .zip archive. Inside, each list must be in the folder Industry/Country, for example:"
-msgstr "Klasörün tamamını .zip arşivi olarak yükleyin. İçinde her liste Sektör/Ülke klasöründe olmalıdır, örneğin:"
+msgid ""
+"Upload the whole folder as a .zip archive. Inside, each list must be in the "
+"folder Industry/Country, for example:"
+msgstr ""
+"Klasörün tamamını .zip arşivi olarak yükleyin. İçinde her liste Sektör/Ülke "
+"klasöründe olmalıdır, örneğin:"
 
-msgid "The industry and country are taken from the folder names. Columns are recognised by their titles, so their order does not matter."
-msgstr "Sektör ve ülke klasör adlarından alınır. Sütunlar başlıklarından tanınır, sıralarının önemi yoktur."
+msgid ""
+"The industry and country are taken from the folder names. Columns are "
+"recognised by their titles, so their order does not matter."
+msgstr ""
+"Sektör ve ülke klasör adlarından alınır. Sütunlar başlıklarından tanınır, "
+"sıralarının önemi yoktur."
 
-msgid "Importing the same files again does not create duplicates: companies are matched by name and country, e-mails and contacts are merged."
-msgstr "Aynı dosyaları tekrar içe aktarmak kopya oluşturmaz: firmalar ad ve ülkeye göre eşleştirilir, e-postalar ve kişiler birleştirilir."
+msgid ""
+"Importing the same files again does not create duplicates: companies are "
+"matched by name and country, e-mails and contacts are merged."
+msgstr ""
+"Aynı dosyaları tekrar içe aktarmak kopya oluşturmaz: firmalar ad ve ülkeye "
+"göre eşleştirilir, e-postalar ve kişiler birleştirilir."
 
 msgid "Overview of the CTB company database."
 msgstr "CTB firma veritabanına genel bakış."
@@ -594,8 +642,10 @@ msgstr "İptal etmek için tıklayın"
 msgid "No results found"
 msgstr "Sonuç bulunamadı"
 
-msgid "This page yielded into no results. Create a new item or reset your filters."
-msgstr "Bu sayfada sonuç yok. Yeni bir kayıt oluşturun veya filtreleri sıfırlayın."
+msgid ""
+"This page yielded into no results. Create a new item or reset your filters."
+msgstr ""
+"Bu sayfada sonuç yok. Yeni bir kayıt oluşturun veya filtreleri sıfırlayın."
 
 msgid "Reset filters"
 msgstr "Filtreleri sıfırla"
@@ -682,7 +732,9 @@ msgid "You can not create nested object without parent"
 msgstr "Üst kayıt olmadan iç içe kayıt oluşturulamaz"
 
 msgid "After you've created a user, you’ll be able to edit more user options."
-msgstr "Kullanıcıyı oluşturduktan sonra daha fazla kullanıcı seçeneğini düzenleyebilirsiniz."
+msgstr ""
+"Kullanıcıyı oluşturduktan sonra daha fazla kullanıcı seçeneğini "
+"düzenleyebilirsiniz."
 
 msgid "Run"
 msgstr "Çalıştır"
@@ -733,8 +785,11 @@ msgid "Add selected companies to an event"
 msgstr "Seçili firmaları etkinliğe ekle"
 
 #, python-format
-msgid "%(created)d companies added to “%(event)s”, %(skipped)d were already there."
-msgstr "“%(event)s” etkinliğine %(created)d firma eklendi, %(skipped)d tanesi zaten vardı."
+msgid ""
+"%(created)d companies added to “%(event)s”, %(skipped)d were already there."
+msgstr ""
+"“%(event)s” etkinliğine %(created)d firma eklendi, %(skipped)d tanesi zaten "
+"vardı."
 
 msgid "Event"
 msgstr "Etkinlik"
@@ -761,8 +816,12 @@ msgid "Meetings scheduled: %(n)d."
 msgstr "Programa alınan görüşmeler: %(n)d."
 
 #, python-format
-msgid "%(n)d meetings did not fit into the time slots. Add a day, tables or shorter meetings, or remove some meetings."
-msgstr "%(n)d görüşme zaman dilimlerine sığmadı. Gün veya masa ekleyin, görüşme süresini kısaltın ya da bazı görüşmeleri kaldırın."
+msgid ""
+"%(n)d meetings did not fit into the time slots. Add a day, tables or shorter"
+" meetings, or remove some meetings."
+msgstr ""
+"%(n)d görüşme zaman dilimlerine sığmadı. Gün veya masa ekleyin, görüşme "
+"süresini kısaltın ya da bazı görüşmeleri kaldırın."
 
 msgid "wants to meet"
 msgstr "görüşmek istediği"
@@ -879,8 +938,14 @@ msgstr "Henüz etkinlik yok. Önce bir etkinlik oluşturun."
 msgid "Add to event"
 msgstr "Etkinliğe ekle"
 
-msgid "Pairs are suggested when a buyer meets a seller (or “buyer and seller”) and their industries match. Check the participants’ roles and the industries they want to meet."
-msgstr "Alıcı ile satıcı (veya “alıcı ve satıcı”) eşleştirilir ve sektörleri uyuşmalıdır. Katılımcıların rollerini ve görüşmek istedikleri sektörleri kontrol edin."
+msgid ""
+"Pairs are suggested when a buyer meets a seller (or “buyer and seller”) and "
+"their industries match. Check the participants’ roles and the industries "
+"they want to meet."
+msgstr ""
+"Alıcı ile satıcı (veya “alıcı ve satıcı”) eşleştirilir ve sektörleri "
+"uyuşmalıdır. Katılımcıların rollerini ve görüşmek istedikleri sektörleri "
+"kontrol edin."
 
 msgid "Create selected meetings"
 msgstr "Seçili görüşmeleri oluştur"
@@ -892,7 +957,8 @@ msgid "Why"
 msgstr "Neden"
 
 msgid "Set the event dates and meeting hours to build a schedule."
-msgstr "Program oluşturmak için etkinlik tarihlerini ve görüşme saatlerini girin."
+msgstr ""
+"Program oluşturmak için etkinlik tarihlerini ve görüşme saatlerini girin."
 
 msgid "Build schedule"
 msgstr "Programı oluştur"
@@ -903,8 +969,12 @@ msgstr "Saatleri temizle"
 msgid "Export to Excel"
 msgstr "Excel'e aktar"
 
-msgid "Add participants to the event, then use “Suggest matches” to create meetings."
-msgstr "Etkinliğe katılımcı ekleyin, ardından görüşme oluşturmak için “Eşleştirme önerileri”ni kullanın."
+msgid ""
+"Add participants to the event, then use “Suggest matches” to create "
+"meetings."
+msgstr ""
+"Etkinliğe katılımcı ekleyin, ardından görüşme oluşturmak için “Eşleştirme "
+"önerileri”ni kullanın."
 
 msgid "No new pairs found"
 msgstr "Yeni eşleşme bulunamadı"
@@ -913,8 +983,12 @@ msgid "Suggested pairs"
 msgstr "Önerilen eşleşmeler"
 
 #, python-format
-msgid "%(total)s possible pairs, best first. %(checked)s are preselected so that every company fits into the %(slots)s time slots."
-msgstr "%(total)s olası eşleşme, en iyisi önce. Her firmanın %(slots)s zaman dilimine sığması için %(checked)s tanesi önceden seçildi."
+msgid ""
+"%(total)s possible pairs, best first. %(checked)s are preselected so that "
+"every company fits into the %(slots)s time slots."
+msgstr ""
+"%(total)s olası eşleşme, en iyisi önce. Her firmanın %(slots)s zaman "
+"dilimine sığması için %(checked)s tanesi önceden seçildi."
 
 msgid "Meetings without time"
 msgstr "Saati belirlenmemiş görüşmeler"
@@ -954,26 +1028,45 @@ msgstr "Nasıl doldurulur"
 msgid "How to fill in the template"
 msgstr "Şablon nasıl doldurulur"
 
-msgid "1. Fill in one company per row on the first sheet. Only “Company name” is required."
-msgstr "1. İlk sayfada her satıra bir firma yazın. Yalnızca “Firma adı” zorunludur."
+msgid ""
+"1. Fill in one company per row on the first sheet. Only “Company name” is "
+"required."
+msgstr ""
+"1. İlk sayfada her satıra bir firma yazın. Yalnızca “Firma adı” zorunludur."
 
-msgid "2. Several websites, phones or e-mails: one per line (Alt+Enter) or separated by commas."
-msgstr "2. Birden fazla web sitesi, telefon veya e-posta: her satıra bir tane (Alt+Enter) veya virgülle ayırarak."
+msgid ""
+"2. Several websites, phones or e-mails: one per line (Alt+Enter) or "
+"separated by commas."
+msgstr ""
+"2. Birden fazla web sitesi, telefon veya e-posta: her satıra bir tane "
+"(Alt+Enter) veya virgülle ayırarak."
 
-msgid "3. Contact persons: one per line, as “Full name / Position / e-mail / phone”."
-msgstr "3. İrtibat kişileri: her satıra bir kişi, “Ad soyad / Pozisyon / e-posta / telefon” biçiminde."
+msgid ""
+"3. Contact persons: one per line, as “Full name / Position / e-mail / "
+"phone”."
+msgstr ""
+"3. İrtibat kişileri: her satıra bir kişi, “Ad soyad / Pozisyon / e-posta / "
+"telefon” biçiminde."
 
 msgid "4. Country and industries can be picked from the list or typed in."
 msgstr "4. Ülke ve sektörler listeden seçilebilir veya elle yazılabilir."
 
-msgid "5. Save the file and upload it on the “Import from Excel” page. Existing companies are updated, not duplicated."
-msgstr "5. Dosyayı kaydedin ve “Excel'den içe aktar” sayfasından yükleyin. Mevcut firmalar güncellenir, kopyalanmaz."
+msgid ""
+"5. Save the file and upload it on the “Import from Excel” page. Existing "
+"companies are updated, not duplicated."
+msgstr ""
+"5. Dosyayı kaydedin ve “Excel'den içe aktar” sayfasından yükleyin. Mevcut "
+"firmalar güncellenir, kopyalanmaz."
 
 msgid "Example:"
 msgstr "Örnek:"
 
-msgid "Download the template, copy your companies into it (one company per row) and upload it here."
-msgstr "Şablonu indirin, firmalarınızı içine kopyalayın (her satıra bir firma) ve buraya yükleyin."
+msgid ""
+"Download the template, copy your companies into it (one company per row) and"
+" upload it here."
+msgstr ""
+"Şablonu indirin, firmalarınızı içine kopyalayın (her satıra bir firma) ve "
+"buraya yükleyin."
 
 msgid "Download Excel template"
 msgstr "Excel şablonunu indir"
@@ -1186,7 +1279,8 @@ msgid "Send invitation e-mail"
 msgstr "Davet e-postası gönder"
 
 #, python-format
-msgid "Placeholders: %(list)s. Your signature is added at the end automatically."
+msgid ""
+"Placeholders: %(list)s. Your signature is added at the end automatically."
 msgstr "Yer tutucular: %(list)s. İmzanız sona otomatik eklenir."
 
 msgid "Placeholders can be used here too."
@@ -1242,8 +1336,12 @@ msgstr "Firmanın tüm adresleri"
 msgid "password"
 msgstr "parola"
 
-msgid "For Gmail use an app password (Google account → Security → App passwords). Leave empty to keep the saved password."
-msgstr "Gmail için uygulama şifresi kullanın (Google hesabı → Güvenlik → Uygulama şifreleri). Kayıtlı parolayı korumak için boş bırakın."
+msgid ""
+"For Gmail use an app password (Google account → Security → App passwords). "
+"Leave empty to keep the saved password."
+msgstr ""
+"Gmail için uygulama şifresi kullanın (Google hesabı → Güvenlik → Uygulama "
+"şifreleri). Kayıtlı parolayı korumak için boş bırakın."
 
 msgid "Sending is not set up yet: fill in the Mail settings page."
 msgstr "Gönderim henüz ayarlanmadı: E-posta ayarları sayfasını doldurun."
@@ -1300,8 +1398,11 @@ msgstr "kullanıcı adı"
 msgid "Usually the full e-mail address."
 msgstr "Genellikle tam e-posta adresi."
 
-msgid "For Gmail use an app password (Google account → Security → App passwords)."
-msgstr "Gmail için uygulama şifresi kullanın (Google hesabı → Güvenlik → Uygulama şifreleri)."
+msgid ""
+"For Gmail use an app password (Google account → Security → App passwords)."
+msgstr ""
+"Gmail için uygulama şifresi kullanın (Google hesabı → Güvenlik → Uygulama "
+"şifreleri)."
 
 msgid "sender address"
 msgstr "gönderen adresi"
@@ -1341,15 +1442,22 @@ msgid "Example: %(company)s, %(event)s"
 msgstr "Örnek: %(company)s, %(event)s"
 
 #, python-format
-msgid "You have no signature yet. <a class=\"text-primary-600\" href=\"%(signature_url)s\">Add it</a> and it will appear at the end of every e-mail."
-msgstr "Henüz imzanız yok. <a class=\"text-primary-600\" href=\"%(signature_url)s\">Ekleyin</a>, her e-postanın sonunda görünecek."
+msgid ""
+"You have no signature yet. <a class=\"text-primary-600\" "
+"href=\"%(signature_url)s\">Add it</a> and it will appear at the end of every"
+" e-mail."
+msgstr ""
+"Henüz imzanız yok. <a class=\"text-primary-600\" "
+"href=\"%(signature_url)s\">Ekleyin</a>, her e-postanın sonunda görünecek."
 
 msgid "Example"
 msgstr "Örnek"
 
 #, python-format
 msgid "At most %(limit)s e-mails are sent at once; run it again for the rest."
-msgstr "Tek seferde en fazla %(limit)s e-posta gönderilir; kalanlar için tekrar çalıştırın."
+msgstr ""
+"Tek seferde en fazla %(limit)s e-posta gönderilir; kalanlar için tekrar "
+"çalıştırın."
 
 #, python-format
 msgid "As %(company)s will receive it:"
@@ -1363,3 +1471,259 @@ msgstr[1] "%(n)s firmaya gönder"
 
 msgid "Can export companies and e-mails to Excel"
 msgstr "Firmaları ve e-postaları Excel'e aktarabilir"
+
+msgid "Copy link"
+msgstr "Bağlantıyı kopyala"
+
+msgid "Address check"
+msgstr "Adres kontrolü"
+
+msgid "check"
+msgstr "kontrol"
+
+msgid ""
+"Domain lookups do not work on this server; only the spelling was checked."
+msgstr ""
+"Bu sunucuda alan adı sorgusu çalışmıyor; yalnızca yazım kontrol edildi."
+
+#, python-format
+msgid "Address check: %(result)s."
+msgstr "Adres kontrolü: %(result)s."
+
+msgid "Check selected e-mail addresses"
+msgstr "Seçili e-posta adreslerini kontrol et"
+
+msgid "Check unchecked addresses"
+msgstr "Kontrol edilmemiş adresleri kontrol et"
+
+#, python-format
+msgid "%(n)d addresses are left: click the button again."
+msgstr "%(n)d adres kaldı: düğmeye tekrar tıklayın."
+
+msgid "Registration form"
+msgstr "Kayıt formu"
+
+msgid "general registration link"
+msgstr "genel kayıt bağlantısı"
+
+msgid "Available after saving."
+msgstr "Kaydettikten sonra görünür."
+
+msgid ""
+"For anyone (website, social media). Invitation e-mails contain a personal "
+"link for each company: {registration_link}."
+msgstr ""
+"Herkes için (web sitesi, sosyal medya). Davet e-postalarında her firmaya "
+"özel bir bağlantı bulunur: {registration_link}."
+
+msgid "registration form link"
+msgstr "kayıt formu bağlantısı"
+
+msgid ""
+"Click to insert into the text. Your signature is added at the end "
+"automatically."
+msgstr "Metne eklemek için tıklayın. İmzanız otomatik olarak sona eklenir."
+
+#, python-format
+msgid "%(n)d without company · %(invalid)d invalid"
+msgstr "%(n)d firmasız · %(invalid)d geçersiz"
+
+msgid "Registered"
+msgstr "Kayıt oldu"
+
+msgid "Not a valid e-mail address"
+msgstr "Geçerli bir e-posta adresi değil"
+
+#, python-format
+msgid "Domain ends with “%(ending)s”"
+msgstr "Alan adı “%(ending)s” ile bitiyor"
+
+#, python-format
+msgid "Did you mean %(domain)s?"
+msgstr "%(domain)s mi demek istediniz?"
+
+msgid "The domain does not accept e-mail"
+msgstr "Alan adı e-posta kabul etmiyor"
+
+msgid "The domain does not exist"
+msgstr "Alan adı mevcut değil"
+
+msgid "The domain has no mail server"
+msgstr "Alan adının e-posta sunucusu yok"
+
+#, python-format
+msgid "OK: %(n)d"
+msgstr "Geçerli: %(n)d"
+
+#, python-format
+msgid "possible typos: %(n)d"
+msgstr "olası yazım hatası: %(n)d"
+
+#, python-format
+msgid "invalid: %(n)d"
+msgstr "geçersiz: %(n)d"
+
+#, python-format
+msgid "not checked: %(n)d"
+msgstr "kontrol edilemedi: %(n)d"
+
+msgid "registration form link, personal for each company"
+msgstr "kayıt formu bağlantısı, her firmaya özel"
+
+msgid "OK"
+msgstr "Geçerli"
+
+msgid "Possible typo"
+msgstr "Olası yazım hatası"
+
+msgid "Invalid"
+msgstr "Geçersiz"
+
+msgid "Result of the address check. Empty: not checked."
+msgstr "Adres kontrolünün sonucu. Boş: kontrol edilmedi."
+
+msgid "check result"
+msgstr "kontrol sonucu"
+
+msgid "checked"
+msgstr "kontrol tarihi"
+
+msgid "registration form open"
+msgstr "kayıt formu açık"
+
+msgid "Companies can register through the form link."
+msgstr "Firmalar form bağlantısı üzerinden kayıt olabilir."
+
+msgid "registered"
+msgstr "kayıt tarihi"
+
+msgid "When the company filled in the registration form."
+msgstr "Firmanın kayıt formunu doldurduğu zaman."
+
+msgid "participant"
+msgstr "katılımcı"
+
+msgid "Country, if not in the list"
+msgstr "Ülke (listede yoksa)"
+
+msgid "Website"
+msgstr "Web sitesi"
+
+msgid "Phone"
+msgstr "Telefon"
+
+msgid "What does your company do?"
+msgstr "Firmanız ne iş yapıyor?"
+
+msgid "Your role at the event"
+msgstr "Etkinlikteki rolünüz"
+
+msgid "Industries you want to meet"
+msgstr "Görüşmek istediğiniz sektörler"
+
+msgid "Countries you want to meet"
+msgstr "Görüşmek istediğiniz ülkeler"
+
+msgid "What are you looking for or offering?"
+msgstr "Ne arıyorsunuz veya ne sunuyorsunuz?"
+
+msgid "Maximum number of meetings"
+msgstr "En fazla görüşme sayısı"
+
+msgid ""
+"I agree that CTB stores this data and uses it to organise the event and the "
+"meetings."
+msgstr ""
+"CTB'nin bu bilgileri saklamasını ve etkinlik ile görüşmelerin organizasyonu "
+"için kullanmasını kabul ediyorum."
+
+msgid "Full name"
+msgstr "Ad soyad"
+
+msgid "Position"
+msgstr "Pozisyon"
+
+msgid "This e-mail is already given for another participant."
+msgstr "Bu e-posta başka bir katılımcı için zaten girildi."
+
+msgid "personal invitation link"
+msgstr "kişisel davet bağlantısı"
+
+msgid "participant's e-mail"
+msgstr "katılımcının e-postası"
+
+msgid "website or e-mail domain"
+msgstr "web sitesi veya e-posta alan adı"
+
+#, python-format
+msgid "Country (registration form): %(c)s"
+msgstr "Ülke (kayıt formu): %(c)s"
+
+#, python-format
+msgid "Added from the registration form for %(event)s."
+msgstr "%(event)s kayıt formundan eklendi."
+
+#, python-format
+msgid "Participants: %(list)s"
+msgstr "Katılımcılar: %(list)s"
+
+msgid "New company created."
+msgstr "Yeni firma oluşturuldu."
+
+#, python-format
+msgid "Found by: %(how)s"
+msgstr "Eşleştirme: %(how)s"
+
+#, python-format
+msgid "Name in the form: %(name)s"
+msgstr "Formdaki firma adı: %(name)s"
+
+msgid "Registrations"
+msgstr "Kayıtlar"
+
+msgid "Participant"
+msgstr "Katılımcı"
+
+msgid "Remove"
+msgstr "Kaldır"
+
+msgid "Registration"
+msgstr "Kayıt"
+
+msgid "Registration for this event is closed."
+msgstr "Bu etkinlik için kayıtlar kapandı."
+
+msgid "Please contact the CTB team if you would like to take part."
+msgstr "Katılmak isterseniz lütfen CTB ekibiyle iletişime geçin."
+
+msgid "Thank you, your registration has been received."
+msgstr "Teşekkürler, kaydınız alındı."
+
+msgid "We will contact you with the details and the meeting schedule."
+msgstr "Ayrıntılar ve görüşme programı için sizinle iletişime geçeceğiz."
+
+msgid "To change the data, open the same link from the invitation again."
+msgstr "Bilgileri değiştirmek için davetteki aynı bağlantıyı tekrar açın."
+
+msgid "Please correct the fields marked in red."
+msgstr "Lütfen kırmızı ile işaretlenen alanları düzeltin."
+
+msgid "Who will come to the event. You can add several people."
+msgstr "Etkinliğe kimler gelecek. Birden fazla kişi ekleyebilirsiniz."
+
+msgid "Add participant"
+msgstr "Katılımcı ekle"
+
+msgid "Send registration"
+msgstr "Kaydı gönder"
+
+#, python-format
+msgid ""
+"This is the personal registration link of %(company)s. Please check the data"
+" below, correct it if needed and add the participants."
+msgstr ""
+"Bu, %(company)s firmasına özel kayıt bağlantısıdır. Lütfen aşağıdaki "
+"bilgileri kontrol edin, gerekirse düzeltin ve katılımcıları ekleyin."
+
+msgid "Latest registrations"
+msgstr "Son kayıtlar"

@@ -15,7 +15,7 @@ GROUPS = (READ_ONLY_GROUP, EDITOR_GROUP)
 # Models colleagues work with; mail settings and user profiles stay with the administrator.
 SHARED_MODELS = [
     "company", "email", "contact", "country", "industry", "tag", "event", "participation",
-    "activity", "meeting", "emailtemplate", "templateattachment",
+    "activity", "attendee", "meeting", "emailtemplate", "templateattachment",
 ]
 
 

@@ -33,6 +33,12 @@
         {% endfor %}
     </div>
 
+    {% if follow_ups.rows %}
+        {% component "unfold/components/card.html" with title=_("To contact today") title_icon="notifications_active" %}
+            {% component "unfold/components/table.html" with table=follow_ups card_included=1 striped=1 %}{% endcomponent %}
+        {% endcomponent %}
+    {% endif %}
+
     <div class="grid lg:grid-cols-2 gap-6">
         {% component "unfold/components/card.html" with title=_("Companies by country") title_icon="public" %}
             {% component "unfold/components/table.html" with table=by_country card_included=1 striped=1 %}{% endcomponent %}

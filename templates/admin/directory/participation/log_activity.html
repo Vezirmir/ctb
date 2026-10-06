@@ -1,0 +1,89 @@
+{% extends "admin/base_site.html" %}
+{% load i18n unfold %}
+
+{% block breadcrumbs %}{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+    <h1 class="ctb-display text-2xl text-important">{{ participation.company.name }}</h1>
+    <p class="text-subtle mt-1">
+        {{ participation.event }} · {{ participation.company.country|default:"—" }} ·
+        {% include "unfold/helpers/label.html" with text=participation.get_status_display %}
+    </p>
+</div>
+
+<div class="grid lg:grid-cols-3 gap-6">
+    <div class="lg:col-span-2 flex flex-col gap-6">
+        {% component "unfold/components/card.html" with title=_("Record contact") title_icon="edit_note" %}
+            <form method="post">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{{ back }}">
+                <div class="grid md:grid-cols-2 gap-x-6">
+                    {% include "unfold/helpers/field.html" with field=form.kind %}
+                    {% include "unfold/helpers/field.html" with field=form.email %}
+                    {% include "unfold/helpers/field.html" with field=form.contact %}
+                    {% include "unfold/helpers/field.html" with field=form.status %}
+                </div>
+                {% include "unfold/helpers/field.html" with field=form.comment %}
+                {% include "unfold/helpers/field.html" with field=form.next_action_on %}
+                {% include "unfold/helpers/field.html" with field=form.happened_at %}
+                <div class="flex flex-wrap gap-2 mt-2">
+                    {% component "unfold/components/button.html" with submit=1 icon="check" %}{% translate "Save" %}{% endcomponent %}
+                    {% component "unfold/components/button.html" with href=back variant="default" %}{% translate "Cancel" %}{% endcomponent %}
+                </div>
+            </form>
+        {% endcomponent %}
+
+        {% component "unfold/components/card.html" with title=_("History") title_icon="history" %}
+            {% if history %}
+                <ul class="flex flex-col gap-4">
+                {% for a in history %}
+                    <li class="flex flex-col gap-1">
+                        <div class="flex flex-wrap items-center gap-2">
+                            {% include "unfold/helpers/label.html" with text=a.get_kind_display %}
+                            <span class="text-important">{{ a.happened_at|date:"d.m.Y H:i" }}</span>
+                            {% if a.email %}<span class="text-subtle">{{ a.email }}</span>{% endif %}
+                            {% if a.contact %}<span class="text-subtle">{{ a.contact }}</span>{% endif %}
+                            {% if a.created_by %}<span class="text-subtle text-xs">· {{ a.created_by }}</span>{% endif %}
+                        </div>
+                        {% if a.comment %}<p class="whitespace-pre-line">{{ a.comment }}</p>{% endif %}
+                    </li>
+                {% endfor %}
+                </ul>
+            {% else %}
+                <p class="text-subtle">{% translate "No contacts recorded yet." %}</p>
+            {% endif %}
+        {% endcomponent %}
+    </div>
+
+    {% component "unfold/components/card.html" with title=_("Contact details") title_icon="contact_phone" class="ctb-contact-card" %}
+        <div class="flex flex-col gap-4 text-sm">
+            <div>
+                <h3 class="font-semibold text-important mb-1">{% translate "E-mails" %}</h3>
+                <ul class="flex flex-col gap-1">
+                    {% for e in emails %}
+                        <li><a class="text-primary-600" href="mailto:{{ e.email }}">{{ e.email }}</a>
+                            {% if e.description %}<span class="text-subtle text-xs"> · {{ e.description|truncatechars:50 }}</span>{% endif %}</li>
+                    {% empty %}<li class="text-subtle">—</li>{% endfor %}
+                </ul>
+            </div>
+            <div>
+                <h3 class="font-semibold text-important mb-1">{% translate "Phones" %}</h3>
+                <ul class="flex flex-col gap-1">
+                    {% for phone in phones %}<li><a href="tel:{{ phone|cut:' ' }}">{{ phone }}</a></li>{% empty %}<li class="text-subtle">—</li>{% endfor %}
+                </ul>
+            </div>
+            <div>
+                <h3 class="font-semibold text-important mb-1">{% translate "Contact persons" %}</h3>
+                <ul class="flex flex-col gap-2">
+                    {% for c in contacts %}
+                        <li><span class="text-important">{{ c }}</span>{% if c.position %}<br><span class="text-subtle text-xs">{{ c.position }}</span>{% endif %}
+                            {% if c.email %}<br><a class="text-primary-600 text-xs" href="mailto:{{ c.email }}">{{ c.email }}</a>{% endif %}
+                            {% if c.phone %}<br><a class="text-xs" href="tel:{{ c.phone|cut:' ' }}">{{ c.phone }}</a>{% endif %}</li>
+                    {% empty %}<li class="text-subtle">—</li>{% endfor %}
+                </ul>
+            </div>
+        </div>
+    {% endcomponent %}
+</div>
+{% endblock %}

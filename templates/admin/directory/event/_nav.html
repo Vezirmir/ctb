@@ -1,6 +1,7 @@
 {% load i18n unfold %}
 <div class="flex flex-wrap gap-2 mb-6">
     {% component "unfold/components/button.html" with href=change_url icon="edit" variant="default" %}{{ event.name }}{% endcomponent %}
+    {% component "unfold/components/button.html" with href=invitations_url icon="forward_to_inbox" variant="default" %}{% translate "Invitations" %}{% endcomponent %}
     {% component "unfold/components/button.html" with href=matches_url icon="join_inner" variant=matches_variant|default:"default" %}{% translate "Suggest matches" %}{% endcomponent %}
     {% component "unfold/components/button.html" with href=schedule_url icon="calendar_month" variant=schedule_variant|default:"default" %}{% translate "Schedule" %}{% endcomponent %}
 </div>

@@ -243,8 +243,9 @@ UNFOLD = {
                 "title": _("Events"),
                 "items": [
                     {"title": _("Events"), "icon": "event", "link": _changelist("event")},
-                    {"title": _("Participants"), "icon": "groups",
-                     "link": _changelist("participation")},
+                    {"title": _("Invitations"), "icon": "forward_to_inbox",
+                     "link": _changelist("participation"),
+                     "badge": "directory.dashboard.follow_up_badge", "badge_variant": "danger"},
                     {"title": _("Meetings"), "icon": "handshake", "link": _changelist("meeting")},
                 ],
             },

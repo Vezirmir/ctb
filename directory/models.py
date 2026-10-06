@@ -1,5 +1,6 @@
 import datetime
 
+from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
@@ -294,13 +295,14 @@ class Participation(models.Model):
         Company, verbose_name=_("company"), on_delete=models.CASCADE, related_name="participations",
     )
     class Status(models.TextChoices):
+        SHORTLISTED = "shortlisted", _("To invite")
         INVITED = "invited", _("Invited")
         CONFIRMED = "confirmed", _("Confirmed")
         DECLINED = "declined", _("Declined")
         ATTENDED = "attended", _("Attended")
 
     role = models.CharField(_("role"), max_length=10, choices=Role.choices, blank=True)
-    status = models.CharField(_("status"), max_length=10, choices=Status.choices,
+    status = models.CharField(_("status"), max_length=12, choices=Status.choices,
                               default=Status.CONFIRMED)
     wanted_industries = models.ManyToManyField(
         Industry, verbose_name=_("wants to meet industries"), blank=True, related_name="+",
@@ -317,17 +319,56 @@ class Participation(models.Model):
         _("interests"), blank=True,
         help_text=_("What the company is looking for or offering at this event."),
     )
+    next_action_on = models.DateField(
+        _("follow up on"), null=True, blank=True,
+        help_text=_("When to write or call again."),
+    )
 
     class Meta:
         ordering = ["event", "company"]
-        verbose_name = _("participation")
-        verbose_name_plural = _("participations")
+        verbose_name = _("invitation")
+        verbose_name_plural = _("invitations")
         constraints = [
             models.UniqueConstraint(fields=["event", "company"], name="unique_event_company"),
         ]
 
     def __str__(self):
         return f"{self.company} @ {self.event}"
+
+
+class Activity(models.Model):
+    """One contact with an invited company: e-mail sent, call, reply received or note."""
+
+    class Kind(models.TextChoices):
+        EMAIL = "email", _("E-mail sent")
+        CALL = "call", _("Call")
+        REPLY = "reply", _("Reply received")
+        NOTE = "note", _("Note")
+
+    participation = models.ForeignKey(
+        Participation, verbose_name=_("participation"), on_delete=models.CASCADE,
+        related_name="activities",
+    )
+    kind = models.CharField(_("type"), max_length=10, choices=Kind.choices)
+    happened_at = models.DateTimeField(_("date"), default=timezone.now)
+    email = models.EmailField(_("e-mail"), blank=True)
+    contact = models.ForeignKey(
+        Contact, verbose_name=_("contact person"), on_delete=models.SET_NULL,
+        null=True, blank=True, related_name="+",
+    )
+    comment = models.TextField(_("comment"), blank=True)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, verbose_name=_("by"), on_delete=models.SET_NULL,
+        null=True, blank=True, related_name="+",
+    )
+
+    class Meta:
+        ordering = ["-happened_at"]
+        verbose_name = _("activity")
+        verbose_name_plural = _("activities")
+
+    def __str__(self):
+        return f"{self.get_kind_display()} · {timezone.localtime(self.happened_at):%d.%m.%Y %H:%M}"
 
 
 class Meeting(models.Model):

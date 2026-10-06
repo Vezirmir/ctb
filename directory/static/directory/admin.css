@@ -56,3 +56,66 @@
         display: none;
     }
 }
+
+/* Date + time pair inside half-width form columns: let both inputs shrink. */
+.grid .form-field input.vDateField,
+.grid .form-field input.vTimeField {
+    min-width: 0 !important;
+}
+
+/* Invitations list on phones: each row becomes a card - company on top,
+   then status, follow-up date and icon-only e-mail/call buttons. */
+@media (max-width: 767px) {
+    .model-participation #result_list thead {
+        display: none;
+    }
+
+    .model-participation #result_list tbody tr {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 4px 8px;
+        padding: 8px 4px;
+    }
+
+    .model-participation #result_list tbody td,
+    .model-participation #result_list tbody th {
+        display: block;
+        border: 0 !important;
+        padding: 0 4px !important;
+        height: auto !important;
+    }
+
+    .model-participation #result_list .field-company_header {
+        flex: 1 1 70%;
+    }
+
+    .model-participation #result_list .field-event,
+    .model-participation #result_list .field-email_info,
+    .model-participation #result_list .field-call_info {
+        display: none !important;
+    }
+
+    .model-participation #result_list .field-actions_holder {
+        margin-left: auto;
+        width: auto !important;
+    }
+
+    .model-participation #result_list .field-actions_holder a {
+        font-size: 0;
+        gap: 0;
+        padding: 8px;
+    }
+
+    .model-participation #result_list .field-actions_holder a .material-symbols-outlined {
+        font-size: 20px;
+        margin: 0;
+    }
+}
+
+/* Contact page: on phones show the company's phones and e-mails before the form. */
+@media (max-width: 1023px) {
+    .ctb-contact-card {
+        order: -1;
+    }
+}

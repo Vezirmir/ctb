@@ -1025,3 +1025,132 @@ msgstr "Gönderilen e-postalar"
 
 msgid "Needs review"
 msgstr "Kontrol gerekli"
+
+msgid "Invitations"
+msgstr "Davetler"
+
+msgid "follow up"
+msgstr "takip"
+
+msgid "Overdue"
+msgstr "Gecikmiş"
+
+msgid "Today"
+msgstr "Bugün"
+
+msgid "Next 7 days"
+msgstr "Önümüzdeki 7 gün"
+
+msgid "Not planned"
+msgstr "Planlanmadı"
+
+msgid "contact so far"
+msgstr "iletişim durumu"
+
+msgid "Not contacted yet"
+msgstr "Henüz iletişim kurulmadı"
+
+msgid "E-mailed, not called"
+msgstr "E-posta gönderildi, aranmadı"
+
+msgid "Called"
+msgstr "Arandı"
+
+msgid "last call"
+msgstr "son arama"
+
+#, python-format
+msgid "Saved for %(company)s."
+msgstr "%(company)s için kaydedildi."
+
+msgid "Call"
+msgstr "Arama"
+
+msgid "Note"
+msgstr "Not"
+
+msgid "Invitation e-mail sent to selected companies"
+msgstr "Seçili firmalara davet e-postası gönderildi"
+
+msgid "Invitation e-mail"
+msgstr "Davet e-postası"
+
+#, python-format
+msgid "Invitation e-mail recorded for %(n)d companies."
+msgstr "%(n)d firma için davet e-postası kaydedildi."
+
+msgid "Follow up on"
+msgstr "Takip tarihi"
+
+msgid "Type"
+msgstr "Tür"
+
+msgid "Contact person"
+msgstr "İrtibat kişisi"
+
+msgid "Comment"
+msgstr "Yorum"
+
+msgid "When to write or call again. Leave empty if nothing is planned."
+msgstr "Ne zaman tekrar yazılacak veya aranacak. Plan yoksa boş bırakın."
+
+#, python-format
+msgid "Keep: %(status)s"
+msgstr "Değiştirme: %(status)s"
+
+msgid "To invite"
+msgstr "Davet edilecek"
+
+msgid "follow up on"
+msgstr "takip tarihi"
+
+msgid "When to write or call again."
+msgstr "Ne zaman tekrar yazılacak veya aranacak."
+
+msgid "E-mail sent"
+msgstr "E-posta gönderildi"
+
+msgid "Reply received"
+msgstr "Yanıt alındı"
+
+msgid "type"
+msgstr "tür"
+
+msgid "date"
+msgstr "tarih"
+
+msgid "comment"
+msgstr "yorum"
+
+msgid "by"
+msgstr "kaydeden"
+
+msgid "activity"
+msgstr "iletişim kaydı"
+
+msgid "activities"
+msgstr "iletişim kayıtları"
+
+msgid "Save"
+msgstr "Kaydet"
+
+msgid "Cancel"
+msgstr "İptal"
+
+msgid "No contacts recorded yet."
+msgstr "Henüz iletişim kaydı yok."
+
+msgid "To contact today"
+msgstr "Bugün iletişime geçilecekler"
+
+msgid "Record contact"
+msgstr "İletişimi kaydet"
+
+msgid "History"
+msgstr "Geçmiş"
+
+msgid "invitation"
+msgstr "davet"
+
+msgid "invitations"
+msgstr "davetler"

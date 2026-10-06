@@ -1,10 +1,11 @@
 from django.db.models import Count, Q
 from django.urls import reverse
+from django.utils import timezone
 from django.utils.html import format_html
 from django.utils.text import capfirst
 from django.utils.translation import gettext as _
 
-from .models import Company, Contact, Country, Email, Industry
+from .models import Company, Contact, Country, Email, Industry, Participation
 
 
 def _link(url, text):
@@ -13,6 +14,17 @@ def _link(url, text):
 
 def company_badge(request):
     return Company.objects.count() or ""
+
+
+def _follow_ups_due():
+    return Participation.objects.filter(
+        next_action_on__lte=timezone.localdate()
+    ).exclude(status__in=[Participation.Status.DECLINED, Participation.Status.ATTENDED])
+
+
+def follow_up_badge(request):
+    """Number of invitations to follow up today or overdue (shown in the menu)."""
+    return _follow_ups_due().count() or ""
 
 
 def _breakdown(model, lookup):
@@ -75,6 +87,23 @@ def dashboard_callback(request, context):
             .order_by("-last_sent_on")[:8]
         ],
     }
+    participations = reverse("admin:directory_participation_changelist")
+    today = timezone.localdate()
+    context["follow_ups"] = {
+        "headers": [_("Company"), _("Event"), _("Status"), _("Follow up on")],
+        "rows": [
+            [
+                _link(reverse("admin:directory_participation_row_call", args=[p.pk]), p.company.name),
+                p.event.name,
+                p.get_status_display(),
+                format_html('<span class="{}">{}</span>',
+                            "text-red-600 font-semibold" if p.next_action_on < today else "",
+                            p.next_action_on.strftime("%d.%m.%Y")),
+            ]
+            for p in _follow_ups_due().select_related("company", "event").order_by("next_action_on")[:8]
+        ],
+    }
+    context["follow_ups_url"] = f"{participations}?follow_up=overdue"
     context["recent_companies"] = {
         "headers": [_("Company"), _("Country"), _("Added")],
         "rows": [

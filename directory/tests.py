@@ -500,3 +500,98 @@ class EmailExportTests(TestCase):
         ws = load_workbook(io.BytesIO(response.content)).active
         self.assertEqual([r[0] for r in ws.iter_rows(min_row=2, values_only=True)], ["info@other.kz"])
         self.assertEqual(ws["H2"].value, "Другие страны")
+
+
+class InvitationTests(TestCase):
+    def setUp(self):
+        translation.activate("en")
+        from .models import Event, Participation
+        self.user = get_user_model().objects.create_superuser("admin", "a@example.com", "pw")
+        self.client.force_login(self.user)
+        self.event = Event.objects.create(name="Bursa 2026", start_date=date(2026, 11, 3))
+        self.company = Company.objects.create(name="Acme")
+        Email.objects.create(company=self.company, email="info@acme.ru")
+        self.contact = Contact.objects.create(company=self.company, full_name="Ivan", phone="+7 900")
+        self.p = Participation.objects.create(event=self.event, company=self.company,
+                                              status=Participation.Status.SHORTLISTED)
+        other = Company.objects.create(name="Beta")
+        self.p2 = Participation.objects.create(event=self.event, company=other,
+                                               status=Participation.Status.SHORTLISTED)
+
+    def test_log_activity_moves_shortlisted_to_invited(self):
+        from .invitations import log_activity
+        from .models import Activity
+        log_activity(self.p, Activity.Kind.EMAIL, self.user, email="info@acme.ru")
+        self.p.refresh_from_db()
+        self.assertEqual(self.p.status, "invited")
+        log_activity(self.p, Activity.Kind.CALL, self.user, comment="Interested",
+                     status="confirmed", next_action_on=date(2026, 10, 20))
+        self.p.refresh_from_db()
+        self.assertEqual((self.p.status, self.p.next_action_on), ("confirmed", date(2026, 10, 20)))
+        self.assertEqual(self.p.activities.count(), 2)
+
+    def test_row_call_form_and_save(self):
+        url = reverse("admin:directory_participation_row_call", args=[self.p.pk])
+        page = self.client.get(url)
+        self.assertContains(page, "info@acme.ru")
+        self.assertContains(page, "tel:+7900")
+        back = reverse("admin:directory_participation_changelist") + "?status__exact=invited"
+        response = self.client.post(url, {
+            "kind": "call", "happened_at_0": "2026-10-07", "happened_at_1": "11:30",
+            "email": "", "contact": self.contact.pk, "comment": "Call back next week",
+            "status": "", "next_action_on": "2026-10-14", "next": back,
+        })
+        self.assertRedirects(response, back, fetch_redirect_response=False)
+        activity = self.p.activities.get()
+        self.assertEqual((activity.kind, activity.contact, activity.created_by),
+                         ("call", self.contact, self.user))
+        self.p.refresh_from_db()
+        self.assertEqual((self.p.status, self.p.next_action_on), ("shortlisted", date(2026, 10, 14)))
+
+    def test_unsafe_next_is_ignored(self):
+        url = reverse("admin:directory_participation_row_note", args=[self.p.pk])
+        response = self.client.post(url, {
+            "kind": "note", "happened_at_0": "2026-10-07", "happened_at_1": "10:00",
+            "next": "https://evil.example.com/",
+        })
+        self.assertEqual(response["Location"], reverse("admin:directory_participation_changelist"))
+
+    def test_bulk_invitation_emails_and_list(self):
+        changelist = reverse("admin:directory_participation_changelist")
+        self.client.post(changelist, {"action": "log_invitation_emails",
+                                      "_selected_action": [self.p.pk, self.p2.pk]})
+        self.p.refresh_from_db()
+        self.assertEqual(self.p.status, "invited")
+        self.assertEqual(self.p.activities.get().email, "info@acme.ru")
+        for language in ("en", "tr"):
+            self.client.cookies["django_language"] = language
+            for query in ("", "?contacted=none", "?contacted=emailed", "?follow_up=overdue",
+                          f"?event__id__exact={self.event.pk}"):
+                self.assertEqual(self.client.get(changelist + query).status_code, 200, query)
+        self.client.cookies["django_language"] = "en"
+        self.assertContains(self.client.get(changelist), "log-call")
+
+    def test_filters(self):
+        from .invitations import log_activity
+        from .models import Participation
+        log_activity(self.p, "email", self.user, next_action_on=date(2020, 1, 1))
+        changelist = reverse("admin:directory_participation_changelist")
+        rows = lambda q: list(self.client.get(changelist + q).context["cl"].result_list)
+        self.assertEqual(rows("?contacted=none"), [self.p2])
+        self.assertEqual(rows("?contacted=emailed"), [Participation.objects.get(pk=self.p.pk)])
+        self.assertEqual(rows("?follow_up=overdue"), [Participation.objects.get(pk=self.p.pk)])
+
+    def test_dashboard_follow_ups_and_event_link(self):
+        self.p.next_action_on = date(2020, 1, 1)
+        self.p.save()
+        dashboard = self.client.get(reverse("admin:index"))
+        self.assertContains(dashboard, reverse("admin:directory_participation_row_call", args=[self.p.pk]))
+        response = self.client.get(reverse("admin:directory_event_invitations", args=[self.event.pk]))
+        self.assertRedirects(response, reverse("admin:directory_participation_changelist")
+                             + f"?event__id__exact={self.event.pk}", fetch_redirect_response=False)
+
+    def test_participation_page_with_history_inline(self):
+        from .invitations import log_activity
+        log_activity(self.p, "call", self.user, comment="hello")
+        response = self.client.get(reverse("admin:directory_participation_change", args=[self.p.pk]))
+        self.assertContains(response, "hello")

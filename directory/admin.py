@@ -6,12 +6,13 @@ from django.contrib.auth.admin import GroupAdmin as BaseGroupAdmin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.auth.models import Group, User
 from django.db import models
-from django.db.models import Count, Exists, OuterRef
+from django.db.models import Count, Exists, Max, OuterRef, Q, Subquery
 from django.shortcuts import get_object_or_404, redirect
 from django.template.response import TemplateResponse
 from django.urls import path, reverse
 from django.utils import timezone
 from django.utils.html import format_html, format_html_join
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils.translation import gettext_lazy as _
 from unfold.admin import ModelAdmin, TabularInline
 from unfold.contrib.filters.admin import ChoicesDropdownFilter, RelatedDropdownFilter
@@ -23,13 +24,14 @@ from .exports import (
     companies_to_xlsx_response, emails_to_xlsx_response, import_template_response,
     schedule_to_xlsx_response,
 )
-from .forms import AddToEventForm, ImportForm
+from .forms import ActivityForm, AddToEventForm, ImportForm
 from .importer import Importer, read_zip
+from .invitations import log_activity
 from .matchmaking import (
     build_schedule, clear_schedule, create_meetings, preselect, schedule_rows, suggest,
 )
 from .models import (
-    Company, Contact, Country, Email, Event, Industry, Meeting, Participation, Tag,
+    Activity, Company, Contact, Country, Email, Event, Industry, Meeting, Participation, Tag,
 )
 
 admin.site.site_header = _("CTB — B2B company database")
@@ -374,6 +376,7 @@ ROLE_LABELS = {
     Participation.Role.BOTH: "primary",
 }
 PARTICIPATION_STATUS_LABELS = {
+    Participation.Status.SHORTLISTED: "primary",
     Participation.Status.INVITED: "warning",
     Participation.Status.CONFIRMED: "info",
     Participation.Status.DECLINED: "danger",
@@ -407,7 +410,7 @@ class EventAdmin(ModelAdmin):
     autocomplete_fields = ["country"]
     date_hierarchy = "start_date"
     inlines = [EventParticipationInline, EventMeetingInline]
-    actions_detail = ["matches", "schedule"]
+    actions_detail = ["invitations", "matches", "schedule"]
     formfield_overrides = {
         models.TimeField: {"widget": UnfoldAdminSingleTimeWidget(format="%H:%M")},
         models.TextField: {"widget": UnfoldAdminTextareaWidget(attrs={"rows": 3})},
@@ -447,7 +450,14 @@ class EventAdmin(ModelAdmin):
             "change_url": reverse("admin:directory_event_change", args=[event.pk]),
             "matches_url": reverse("admin:directory_event_matches", args=[event.pk]),
             "schedule_url": reverse("admin:directory_event_schedule", args=[event.pk]),
+            "invitations_url": reverse("admin:directory_participation_changelist")
+            + f"?event__id__exact={event.pk}",
         }
+
+    @action(description=_("Invitations"), url_path="invitations", icon="forward_to_inbox")
+    def invitations(self, request, object_id):
+        return redirect(reverse("admin:directory_participation_changelist")
+                        + f"?event__id__exact={int(object_id)}")
 
     @action(description=_("Suggest matches"), url_path="matches", icon="join_inner",
             permissions=["change"])
@@ -503,42 +513,235 @@ class EventAdmin(ModelAdmin):
         return TemplateResponse(request, "admin/directory/event/schedule.html", context)
 
 
+class FollowUpFilter(admin.SimpleListFilter):
+    title = _("follow up")
+    parameter_name = "follow_up"
+
+    def lookups(self, request, model_admin):
+        return [
+            ("overdue", _("Overdue")),
+            ("today", _("Today")),
+            ("week", _("Next 7 days")),
+            ("none", _("Not planned")),
+        ]
+
+    def queryset(self, request, queryset):
+        today = timezone.localdate()
+        if self.value() == "overdue":
+            return queryset.filter(next_action_on__lt=today)
+        if self.value() == "today":
+            return queryset.filter(next_action_on=today)
+        if self.value() == "week":
+            return queryset.filter(next_action_on__gte=today,
+                                   next_action_on__lte=today + timezone.timedelta(days=7))
+        if self.value() == "none":
+            return queryset.filter(next_action_on__isnull=True)
+        return queryset
+
+
+class ContactedFilter(admin.SimpleListFilter):
+    title = _("contact so far")
+    parameter_name = "contacted"
+
+    def lookups(self, request, model_admin):
+        return [
+            ("none", _("Not contacted yet")),
+            ("emailed", _("E-mailed, not called")),
+            ("called", _("Called")),
+            ("replied", _("Replied")),
+        ]
+
+    def queryset(self, request, queryset):
+        kinds = Activity.Kind
+        if self.value() == "none":
+            return queryset.filter(activities__isnull=True)
+        if self.value() == "emailed":
+            return queryset.filter(activities__kind=kinds.EMAIL).exclude(
+                activities__kind=kinds.CALL).distinct()
+        if self.value() == "called":
+            return queryset.filter(activities__kind=kinds.CALL).distinct()
+        if self.value() == "replied":
+            return queryset.filter(activities__kind=kinds.REPLY).distinct()
+        return queryset
+
+
+class ActivityInline(TabularInline):
+    model = Activity
+    extra = 0
+    tab = True
+    fields = ["kind", "happened_at", "email", "contact", "comment", "created_by"]
+    readonly_fields = ["created_by"]
+    formfield_overrides = {models.TextField: {"widget": UnfoldAdminTextareaWidget(attrs={"rows": 1})}}
+
+    def get_formset(self, request, obj=None, **kwargs):
+        formset = super().get_formset(request, obj, **kwargs)
+        if obj is not None:
+            formset.form.base_fields["contact"].queryset = obj.company.contacts.all()
+        return formset
+
+
+def _last_activity(kind, field):
+    return Subquery(
+        Activity.objects.filter(participation=OuterRef("pk"), kind=kind)
+        .order_by("-happened_at").values(field)[:1]
+    )
+
+
 @admin.register(Participation)
 class ParticipationAdmin(ModelAdmin):
-    list_display = ["company", "event", "role_label", "status_label", "wanted", "max_meetings"]
+    list_display = ["company_header", "event", "status_label", "email_info", "call_info",
+                    "follow_up"]
+    list_display_links = ["company_header"]
     list_filter = [
         ("event", RelatedDropdownFilter),
-        ("role", ChoicesDropdownFilter),
         ("status", ChoicesDropdownFilter),
+        FollowUpFilter,
+        ContactedFilter,
+        ("role", ChoicesDropdownFilter),
         ("company__country", RelatedDropdownFilter),
+        ("company__industries", RelatedDropdownFilter),
     ]
     list_filter_submit = True
-    list_editable = ["max_meetings"]
-    search_fields = ["company__name", "event__name", "interests"]
+    search_fields = ["company__name", "event__name", "interests", "activities__comment",
+                     "company__emails__email"]
     autocomplete_fields = ["event", "company", "wanted_industries", "wanted_countries"]
-    list_select_related = ["company", "event"]
-    actions = ["mark_confirmed", "mark_declined", "mark_attended"]
-    fields = [("event", "company"), ("role", "status"), ("wanted_industries", "wanted_countries"),
-              ("max_meetings", "interests")]
+    list_select_related = ["company__country", "event"]
+    actions = ["log_invitation_emails", "mark_confirmed", "mark_declined", "mark_attended"]
+    actions_row = ["row_email", "row_call", "row_note"]
+    inlines = [ActivityInline]
+    fields = [("event", "company"), ("status", "next_action_on"), ("role", "max_meetings"),
+              ("wanted_industries", "wanted_countries"), "interests"]
     formfield_overrides = {models.TextField: {"widget": UnfoldAdminTextareaWidget(attrs={"rows": 2})}}
 
     def get_queryset(self, request):
-        return super().get_queryset(request).prefetch_related("wanted_industries",
-                                                              "wanted_countries")
+        kinds = Activity.Kind
+        return (
+            super().get_queryset(request)
+            .annotate(
+                _emails=Count("activities", filter=Q(activities__kind=kinds.EMAIL), distinct=True),
+                _last_email=Max("activities__happened_at", filter=Q(activities__kind=kinds.EMAIL)),
+                _calls=Count("activities", filter=Q(activities__kind=kinds.CALL), distinct=True),
+                _last_call=Max("activities__happened_at", filter=Q(activities__kind=kinds.CALL)),
+                _last_call_comment=_last_activity(kinds.CALL, "comment"),
+            )
+        )
 
-    @display(description=_("role"), label=ROLE_LABELS, ordering="role")
-    def role_label(self, obj):
-        return (obj.role, obj.get_role_display()) if obj.role else None
+    def get_list_display(self, request):
+        columns = list(super().get_list_display(request))
+        if request.GET.get("event__id__exact"):
+            columns.remove("event")  # the list is already one event
+        return columns
+
+    def save_formset(self, request, form, formset, change):
+        for obj in formset.save(commit=False):
+            if isinstance(obj, Activity) and not obj.created_by_id:
+                obj.created_by = request.user
+            obj.save()
+        for obj in formset.deleted_objects:
+            obj.delete()
+        formset.save_m2m()
+
+    # columns --------------------------------------------------------------------------
+
+    @display(description=_("company"), header=True, ordering="company__name")
+    def company_header(self, obj):
+        return [obj.company.name, str(obj.company.country or ""), initials(obj.company.name)]
 
     @display(description=_("status"), label=PARTICIPATION_STATUS_LABELS, ordering="status")
     def status_label(self, obj):
         return obj.status, obj.get_status_display()
 
-    @display(description=_("wants to meet"))
-    def wanted(self, obj):
-        parts = [str(x) for x in obj.wanted_industries.all()] + [
-            str(x) for x in obj.wanted_countries.all()]
-        return ", ".join(parts) or "—"
+    @display(description=_("e-mails sent"), ordering="_last_email")
+    def email_info(self, obj):
+        if not obj._emails:
+            return "—"
+        return format_html("{} · <span class=\"text-subtle\">{}</span>", obj._emails,
+                           timezone.localtime(obj._last_email).strftime("%d.%m.%Y"))
+
+    @display(description=_("last call"), ordering="_last_call")
+    def call_info(self, obj):
+        if not obj._calls:
+            return "—"
+        comment = (obj._last_call_comment or "").strip()
+        if len(comment) > 80:
+            comment = comment[:77] + "…"
+        return format_html(
+            '<div style="min-width:12rem;max-width:18rem">{}<br>'
+            '<span class="text-subtle text-xs">{}</span></div>',
+            timezone.localtime(obj._last_call).strftime("%d.%m.%Y"), comment)
+
+    @display(description=_("follow up"), ordering="next_action_on",
+             label={"overdue": "danger", "today": "warning", "planned": "info"})
+    def follow_up(self, obj):
+        if not obj.next_action_on:
+            return None
+        today = timezone.localdate()
+        state = ("overdue" if obj.next_action_on < today
+                 else "today" if obj.next_action_on == today else "planned")
+        return state, obj.next_action_on.strftime("%d.%m.%Y")
+
+    # row buttons ------------------------------------------------------------------------
+
+    def _log_view(self, request, object_id, kind):
+        participation = get_object_or_404(
+            Participation.objects.select_related("company", "event"), pk=object_id)
+        back = request.POST.get("next") or request.GET.get("next") or request.META.get(
+            "HTTP_REFERER") or reverse("admin:directory_participation_changelist")
+        if not url_has_allowed_host_and_scheme(back, {request.get_host()}):
+            back = reverse("admin:directory_participation_changelist")
+        form = ActivityForm(request.POST or None, participation=participation, initial={
+            "kind": kind, "happened_at": timezone.localtime().replace(second=0, microsecond=0),
+            "email": participation.company.emails.values_list("email", flat=True).first(),
+            "next_action_on": participation.next_action_on,
+        })
+        if request.method == "POST" and form.is_valid():
+            data = form.cleaned_data
+            log_activity(
+                participation, data["kind"], request.user, email=data["email"],
+                contact=data["contact"], comment=data["comment"],
+                happened_at=data["happened_at"], status=data["status"] or None,
+                next_action_on=data["next_action_on"],
+            )
+            messages.success(request, _("Saved for %(company)s.") % {"company": participation.company})
+            return redirect(back)
+        context = {
+            **self.admin_site.each_context(request),
+            "opts": self.model._meta,
+            "title": participation.company.name,
+            "participation": participation,
+            "form": form,
+            "back": back,
+            "history": participation.activities.select_related("contact", "created_by")[:20],
+            "emails": participation.company.emails.all(),
+            "contacts": participation.company.contacts.all(),
+            "phones": participation.company.phone_list,
+        }
+        return TemplateResponse(request, "admin/directory/participation/log_activity.html", context)
+
+    @action(description=_("E-mail"), url_path="log-email", icon="mail", permissions=["change"],
+            extra_options={"display_in_dropdown": False})
+    def row_email(self, request, object_id):
+        return self._log_view(request, object_id, Activity.Kind.EMAIL)
+
+    @action(description=_("Call"), url_path="log-call", icon="call", permissions=["change"],
+            extra_options={"display_in_dropdown": False})
+    def row_call(self, request, object_id):
+        return self._log_view(request, object_id, Activity.Kind.CALL)
+
+    @action(description=_("Note"), url_path="log-note", icon="edit_note", permissions=["change"])
+    def row_note(self, request, object_id):
+        return self._log_view(request, object_id, Activity.Kind.NOTE)
+
+    # bulk actions -----------------------------------------------------------------------
+
+    @admin.action(description=_("Invitation e-mail sent to selected companies"))
+    def log_invitation_emails(self, request, queryset):
+        for participation in queryset.select_related("company"):
+            log_activity(participation, Activity.Kind.EMAIL, request.user,
+                         email=participation.company.emails.values_list("email", flat=True).first(),
+                         comment=_("Invitation e-mail"))
+        messages.success(request, _("Invitation e-mail recorded for %(n)d companies.") % {
+            "n": queryset.count()})
 
     def _set_status(self, request, queryset, status):
         updated = queryset.update(status=status)

@@ -241,6 +241,10 @@ class Event(models.Model):
         null=True, blank=True, related_name="events",
     )
     city = models.CharField(_("city"), max_length=120, blank=True)
+    industries = models.ManyToManyField(
+        Industry, verbose_name=_("sectors"), blank=True, related_name="events",
+        help_text=_("Sectors of the event. A registering company without a sector gets these."),
+    )
     description = models.TextField(_("description"), blank=True)
     day_start = models.TimeField(_("meetings start at"), default=datetime.time(10, 0))
     day_end = models.TimeField(_("meetings end at"), default=datetime.time(17, 0))

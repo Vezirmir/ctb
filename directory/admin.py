@@ -541,9 +541,10 @@ class EventNavMixin:
 class EventAdmin(ModelAdmin):
     list_display = ["name", "start_date", "end_date", "country", "city", "participant_count",
                     "registered_count", "meeting_count"]
-    list_filter = [("country", RelatedDropdownFilter), "start_date"]
+    list_filter = [("country", RelatedDropdownFilter), ("industries", RelatedDropdownFilter),
+                   "start_date"]
     search_fields = ["name", "city"]
-    autocomplete_fields = ["country"]
+    autocomplete_fields = ["country", "industries"]
     date_hierarchy = "start_date"
     inlines = [EventParticipationInline, EventMeetingInline]
     actions_detail = ["invitations", "meetings", "matches", "schedule"]
@@ -555,7 +556,7 @@ class EventAdmin(ModelAdmin):
     }
     fieldsets = [
         (_("Event"), {"fields": ["name", ("start_date", "end_date"), ("country", "city"),
-                                 "description"]}),
+                                 "industries", "description"]}),
         (_("Meeting schedule"), {"fields": [("day_start", "day_end"), ("break_start", "break_end"),
                                             ("meeting_minutes", "tables")]}),
         (_("Registration form"), {"fields": ["registration_open", "registration_link"]}),

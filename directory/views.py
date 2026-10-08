@@ -39,7 +39,7 @@ def registration(request, event_key, token=None):
     else:
         initial, people = initial_data(participation)
         if request.method == "POST":
-            form = RegistrationForm(request.POST)
+            form = RegistrationForm(request.POST, event=event)
             formset = AttendeeFormSet(request.POST, prefix="people")
             if form.is_valid() and formset.is_valid():
                 result = register(event, form.cleaned_data, formset.people, participation)
@@ -55,7 +55,7 @@ def registration(request, event_key, token=None):
                                                   for name in errors]
                            + (["participants"] if formset.non_form_errors() else []))
         else:
-            form = RegistrationForm(initial=initial)
+            form = RegistrationForm(initial=initial, event=event)
             formset = AttendeeFormSet(initial=people, prefix="people")
         context.update({"form": form, "formset": formset})
         response = render(request, "registration/form.html", context)

@@ -29,8 +29,6 @@
             {% include "registration/_field.html" with field=form.website %}
             {% include "registration/_field.html" with field=form.phone %}
             {% include "registration/_field.html" with field=form.address %}
-            {% include "registration/_choices.html" with field=form.industries %}
-            {% include "registration/_field.html" with field=form.description wide=1 %}
         </div>
         <div class="trap" aria-hidden="true">{{ form.ctb_trap }}</div>
     </section>
@@ -51,8 +49,7 @@
         <div class="grid">
             {% include "registration/_field.html" with field=form.role %}
             {% include "registration/_field.html" with field=form.max_meetings %}
-            {% include "registration/_choices.html" with field=form.wanted_industries %}
-            {% include "registration/_choices.html" with field=form.wanted_countries %}
+            {% if form.wanted_industries %}{% include "registration/_choices.html" with field=form.wanted_industries %}{% endif %}
             {% include "registration/_field.html" with field=form.interests wide=1 %}
         </div>
     </section>

@@ -928,6 +928,7 @@ class RegistrationTests(TestCase):
         self.auto = Industry.objects.create(name_en="Automotive", name_tr="Otomotiv")
         self.event = Event.objects.create(name="Bursa 2026", start_date=date(2026, 11, 3),
                                           city="Bursa")
+        self.event.industries.set([self.auto])
         self.acme = Company.objects.create(name="ACME Otomotiv Ltd. Şti.", country=self.tr,
                                            websites="www.acme.com.tr")
         Email.objects.create(company=self.acme, email="info@acme.com.tr", source="list")
@@ -963,6 +964,31 @@ class RegistrationTests(TestCase):
         self.assertEqual(self.client.get("/register/wrong-key/").status_code, 404)
         self.assertEqual(self.client.get(f"{url}wrong-token/").status_code, 404)
 
+    def test_form_fields_follow_event_sectors(self):
+        url = self.event.registration_path()
+        page = self.client.get(url).content.decode()
+        for removed in ("What does your company do?", "Countries you want to meet",
+                        'name="industries"', 'name="wanted_industries"'):
+            self.assertNotIn(removed, page)
+        self.assertIn('class="sectors"', page)
+        machinery = Industry.objects.create(name_en="Machinery", name_tr="Makine")
+        Industry.objects.create(name_en="Textile", name_tr="Tekstil")
+        self.event.industries.add(machinery)
+        page = self.client.get(url).content.decode()
+        self.assertIn('name="wanted_industries"', page)
+        self.assertIn("Machinery", page)
+        self.assertNotIn("Textile", page)  # only the event's sectors can be chosen
+        self.client.post(url, self.data(wanted_industries=[machinery.pk]))
+        p = Participation.objects.get(company__name="Brand New GmbH")
+        self.assertEqual(list(p.wanted_industries.all()), [machinery])
+
+    def test_existing_company_keeps_its_sector(self):
+        textile = Industry.objects.create(name_en="Textile", name_tr="Tekstil")
+        self.acme.industries.set([textile])
+        self.client.post(self.event.registration_path(), self.data(
+            company_name="Acme Otomotiv", **{"people-TOTAL_FORMS": "1"}))
+        self.assertEqual(list(self.acme.industries.all()), [textile])
+
     def test_new_company_is_created_with_participants(self):
         response = self.client.post(self.event.registration_path(), self.data())
         self.assertRedirects(response, self.event.registration_path() + "?done=1")
@@ -973,7 +999,8 @@ class RegistrationTests(TestCase):
         p = company.participations.get()
         self.assertEqual((p.event, p.status, p.role, p.max_meetings), (self.event, "registered", "buyer", 8))
         self.assertIsNotNone(p.registered_at)
-        self.assertEqual(list(p.wanted_countries.all()), [self.tr])
+        self.assertEqual(list(p.wanted_countries.all()), [])
+        self.assertEqual(list(p.wanted_industries.all()), [])  # one sector: nothing to choose
         self.assertEqual([a.full_name for a in p.attendees.all()], ["Hans Müller", "Eva Klein"])
         self.assertEqual(sorted(company.emails.values_list("email", "source")),
                          [("eva@brand-new.de", "registration"), ("hans@brand-new.de", "registration")])

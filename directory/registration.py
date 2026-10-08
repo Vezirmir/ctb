@@ -76,17 +76,10 @@ class RegistrationForm(forms.Form):
     phone = forms.CharField(label=_lazy("Phone"), max_length=60, required=False, widget=TextInput)
     address = forms.CharField(label=_lazy("Address"), max_length=500, required=False,
                               widget=TextArea({"rows": 2}))
-    industries = NamedChoiceField(Industry.objects.all(), label=_lazy("Industries"), required=False,
-                                  widget=forms.CheckboxSelectMultiple)
-    description = forms.CharField(label=_lazy("What does your company do?"), max_length=2000,
-                                  required=False, widget=TextArea)
     role = forms.ChoiceField(label=_lazy("Your role at the event"), required=False, widget=Select,
                              choices=[("", "—")] + list(Participation.Role.choices))
     wanted_industries = NamedChoiceField(
         Industry.objects.all(), label=_lazy("Industries you want to meet"), required=False,
-        widget=forms.CheckboxSelectMultiple)
-    wanted_countries = NamedChoiceField(
-        Country.objects.all(), label=_lazy("Countries you want to meet"), required=False,
         widget=forms.CheckboxSelectMultiple)
     interests = forms.CharField(label=_lazy("What are you looking for or offering?"),
                                 max_length=2000, required=False, widget=TextArea)
@@ -100,6 +93,15 @@ class RegistrationForm(forms.Form):
     # autofill, so a real visitor never trips it.
     ctb_trap = forms.CharField(required=False, widget=forms.TextInput(
         {"tabindex": "-1", "autocomplete": "new-password"}))
+
+    def __init__(self, *args, event, **kwargs):
+        super().__init__(*args, **kwargs)
+        # The event's sectors are the choice; with one sector or none there is nothing to choose.
+        sectors = event.industries.all()
+        if sectors.count() > 1:
+            self.fields["wanted_industries"].queryset = sectors
+        else:
+            del self.fields["wanted_industries"]
 
     def clean_ctb_trap(self):
         if self.cleaned_data["ctb_trap"]:
@@ -158,11 +160,8 @@ def initial_data(participation):
         "website": (company.website_list or [""])[0],
         "phone": (company.phone_list or [""])[0],
         "address": company.address,
-        "description": company.description,
-        "industries": list(company.industries.values_list("pk", flat=True)),
         "role": participation.role,
         "wanted_industries": list(participation.wanted_industries.values_list("pk", flat=True)),
-        "wanted_countries": list(participation.wanted_countries.values_list("pk", flat=True)),
         "interests": participation.interests,
         "max_meetings": participation.max_meetings,
     }
@@ -228,7 +227,7 @@ def _add_line(text, value, key=lambda v: v.lower()):
 
 
 def _update_company(company, data, event):
-    for field in ("city", "address", "description"):
+    for field in ("city", "address"):
         if data.get(field) and not getattr(company, field):
             setattr(company, field, data[field])
     if data.get("country") and not company.country_id:
@@ -243,8 +242,9 @@ def _update_company(company, data, event):
         company.notes = _add_line(company.notes, _("Added from the registration form for %(event)s.")
                                   % {"event": event.name})
     company.save()
-    if data.get("industries"):
-        company.industries.add(*data["industries"])
+    if not company.industries.exists():
+        # A company without a sector takes the sector of the event it registers for.
+        company.industries.add(*event.industries.all())
 
 
 def _save_people(company, people):
@@ -298,8 +298,8 @@ def register(event, data, people, participation=None):
     participation.max_meetings = data.get("max_meetings")
     participation.registered_at = timezone.now()
     participation.save()
-    participation.wanted_industries.set(data.get("wanted_industries") or [])
-    participation.wanted_countries.set(data.get("wanted_countries") or [])
+    if "wanted_industries" in data:
+        participation.wanted_industries.set(data["wanted_industries"])
 
     participation.attendees.all().delete()
     Attendee.objects.bulk_create([

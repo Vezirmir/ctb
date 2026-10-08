@@ -1816,3 +1816,12 @@ msgstr[1] "%(n)d kişi"
 
 msgid "registered companies"
 msgstr "kayıt olan"
+
+msgid "sectors"
+msgstr "sektörler"
+
+msgid ""
+"Sectors of the event. A registering company without a sector gets these."
+msgstr ""
+"Etkinliğin sektörleri. Sektörü olmayan firma kayıt olunca bu sektörleri "
+"alır."

@@ -26,6 +26,7 @@
             {% if event.start_date %}{{ event.start_date|date:"d.m.Y" }}{% if event.end_date and event.end_date != event.start_date %} – {{ event.end_date|date:"d.m.Y" }}{% endif %}{% endif %}
             {% if event.city %} · {{ event.city }}{% endif %}{% if event.country %}, {{ event.country }}{% endif %}
         </p>
+        {% with sectors=event.industries.all %}{% if sectors %}<p class="sectors">{% for sector in sectors %}<span>{{ sector.name }}</span>{% endfor %}</p>{% endif %}{% endwith %}
         {% if event.description %}<p class="lead">{{ event.description|linebreaksbr }}</p>{% endif %}
     </section>
     {% block content %}{% endblock %}

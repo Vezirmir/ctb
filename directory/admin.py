@@ -561,18 +561,17 @@ class EventAdmin(ModelAdmin):
         (_("Registration form"), {"fields": ["registration_open", "registration_link"]}),
     ]
 
-    def get_fieldsets(self, request, obj=None):
-        fieldsets = super().get_fieldsets(request, obj)
-        if obj is None:
-            return fieldsets
-        return [(_("Overview"), {"fields": ["overview"]}), *fieldsets]
+    # One-line overview above the tabs (templates/admin/directory/event/_overview.html).
+    change_form_outer_before_template = "admin/directory/event/_overview.html"
 
-    def get_readonly_fields(self, request, obj=None):
-        return [*super().get_readonly_fields(request, obj), "overview"]
+    def change_view(self, request, object_id, form_url="", extra_context=None):
+        event = Event.objects.filter(pk=object_id).first() if str(object_id).isdigit() else None
+        if event is not None:
+            extra_context = {**(extra_context or {}), "event_overview": self.overview(event)}
+        return super().change_view(request, object_id, form_url, extra_context)
 
-    @display(description=_("participants"))
     def overview(self, obj):
-        """Counts of the event's invitations, each linking to the filtered list."""
+        """[(label, count, url)] for the event's invitations, each linking to the filtered list."""
         status, roles = Participation.Status, Participation.Role
         taking_part = Q(status__in=[status.REGISTERED, status.CONFIRMED, status.ATTENDED])
         counts = obj.participations.aggregate(
@@ -597,11 +596,8 @@ class EventAdmin(ModelAdmin):
             (_("People"), people, None),
         ]
         base = reverse("admin:directory_participation_changelist") + f"?event__id__exact={obj.pk}"
-        return format_html('<div class="ctb-overview">{}</div>', format_html_join("", (
-            '<a class="ctb-stat" href="{}"><span class="ctb-stat-value">{}</span>'
-            '<span class="ctb-stat-label">{}</span></a>'), [
-            (base + query if query is not None else "#tab-participations", value, label)
-            for label, value, query in items]))
+        return [(label, value, base + query if query is not None else "")
+                for label, value, query in items]
 
     @display(description=_("general registration link"))
     def registration_link(self, obj):

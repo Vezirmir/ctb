@@ -1778,7 +1778,7 @@ msgid "Overview"
 msgstr "Özet"
 
 msgid "Invited companies"
-msgstr "Davet edilen firmalar"
+msgstr "Davet edilen"
 
 msgid "To confirm"
 msgstr "Onay bekleyen"

@@ -1,0 +1,8 @@
+{% if event_overview %}
+<div class="ctb-overview">
+    {% for label, value, url in event_overview %}
+        {% if url %}<a class="ctb-stat" href="{{ url }}">{% else %}<span class="ctb-stat">{% endif %}<b>{{ value }}</b>{{ label }}{% if url %}</a>{% else %}</span>{% endif %}
+        {% if forloop.counter == 2 or forloop.counter == 5 %}<span class="ctb-stat-sep"></span>{% endif %}
+    {% endfor %}
+</div>
+{% endif %}

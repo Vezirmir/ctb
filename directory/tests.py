@@ -1197,7 +1197,7 @@ class EventCentredNavigationTests(TestCase):
 
     def test_event_page_shows_overview_and_invitations(self):
         page = self.client.get(reverse("admin:directory_event_change", args=[self.event.pk]))
-        self.assertContains(page, "Overview")
+        self.assertContains(page, 'class="ctb-overview"')
         self.assertContains(page, "To confirm")
         self.assertContains(page, f"?event__id__exact={self.event.pk}&amp;registered=yes")
         self.assertContains(page, reverse("admin:directory_event_meetings", args=[self.event.pk]))

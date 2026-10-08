@@ -11,7 +11,11 @@
     {% if form.errors or formset.non_form_errors %}
         <div class="alert">
             {% translate "Please correct the fields marked in red." %}
-            {% for error in formset.non_form_errors %}<br>{{ error }}{% endfor %}
+            <ul class="alert-list">
+                {% for field in form %}{% if field.errors and field.name != "ctb_trap" %}<li>{{ field.label }}: {{ field.errors|join:" " }}</li>{% endif %}{% endfor %}
+                {% for person in formset %}{% for field in person %}{% if field.errors %}<li>{% translate "Participant" %} {{ forloop.parentloop.counter }} · {{ field.label }}: {{ field.errors|join:" " }}</li>{% endif %}{% endfor %}{% endfor %}
+                {% for error in formset.non_form_errors %}<li>{{ error }}</li>{% endfor %}
+            </ul>
         </div>
     {% endif %}
 
@@ -28,7 +32,7 @@
             {% include "registration/_choices.html" with field=form.industries %}
             {% include "registration/_field.html" with field=form.description wide=1 %}
         </div>
-        <div class="trap" aria-hidden="true">{{ form.homepage }}</div>
+        <div class="trap" aria-hidden="true">{{ form.ctb_trap }}</div>
     </section>
 
     <section class="card">

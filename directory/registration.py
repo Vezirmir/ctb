@@ -96,12 +96,13 @@ class RegistrationForm(forms.Form):
     consent = forms.BooleanField(
         label=_lazy("I agree that CTB stores this data and uses it to organise the event and "
                     "the meetings."))
-    # Spam trap: hidden from people, filled in by bots.
-    homepage = forms.CharField(required=False, widget=forms.TextInput(
-        {"tabindex": "-1", "autocomplete": "off"}))
+    # Spam trap: hidden from people, filled in by bots. The name is one browsers do not
+    # autofill, so a real visitor never trips it.
+    ctb_trap = forms.CharField(required=False, widget=forms.TextInput(
+        {"tabindex": "-1", "autocomplete": "new-password"}))
 
-    def clean_homepage(self):
-        if self.cleaned_data["homepage"]:
+    def clean_ctb_trap(self):
+        if self.cleaned_data["ctb_trap"]:
             raise forms.ValidationError("spam")
         return ""
 

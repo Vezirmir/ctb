@@ -17,6 +17,7 @@ from django.utils.html import format_html, format_html_join
 from django.utils.safestring import mark_safe
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils.translation import gettext_lazy as _
+from django.utils.translation import ngettext
 from unfold.admin import ModelAdmin, StackedInline, TabularInline
 from unfold.contrib.filters.admin import ChoicesDropdownFilter, RelatedDropdownFilter
 from unfold.decorators import action, display
@@ -474,12 +475,27 @@ PARTICIPATION_STATUS_LABELS = {
 
 
 class EventParticipationInline(TabularInline):
+    """Invitations of the event: status can be changed here, e.g. to confirmed after a registration."""
+
     model = Participation
     extra = 0
     tab = True
-    fields = ["company", "role", "status", "max_meetings"]
+    fields = ["company", "role", "status", "registration", "max_meetings"]
+    readonly_fields = ["registration"]
     autocomplete_fields = ["company"]
     show_change_link = True
+
+    def get_queryset(self, request):
+        return (super().get_queryset(request).select_related("company")
+                .annotate(_attendees=Count("attendees", distinct=True))
+                .order_by("-registered_at", "company__name"))
+
+    @display(description=_("registration"))
+    def registration(self, obj):
+        if not obj.pk or not obj.registered_at:
+            return "—"
+        people = ngettext("%(n)d person", "%(n)d people", obj._attendees) % {"n": obj._attendees}
+        return f"{timezone.localtime(obj.registered_at):%d.%m.%Y} · {people}"
 
 
 class EventMeetingInline(TabularInline):
@@ -490,16 +506,48 @@ class EventMeetingInline(TabularInline):
     autocomplete_fields = ["company_a", "company_b"]
 
 
+def event_nav(request, event):
+    """Context for the event button bar (templates/admin/directory/event/_nav.html)."""
+    return {
+        "event": event,
+        "change_url": reverse("admin:directory_event_change", args=[event.pk]),
+        "matches_url": reverse("admin:directory_event_matches", args=[event.pk]),
+        "schedule_url": reverse("admin:directory_event_schedule", args=[event.pk]),
+        "invitations_url": reverse("admin:directory_participation_changelist")
+        + f"?event__id__exact={event.pk}",
+        "meetings_url": reverse("admin:directory_meeting_changelist")
+        + f"?event__id__exact={event.pk}",
+        "can_change": request.user.has_perm("directory.change_event"),
+    }
+
+
+class EventNavMixin:
+    """Shows the event button bar above a list filtered to one event."""
+
+    nav_variant = ""
+
+    def changelist_view(self, request, extra_context=None):
+        extra_context = extra_context or {}
+        event_id = request.GET.get("event__id__exact", "")
+        event = Event.objects.filter(pk=event_id).first() if event_id.isdigit() else None
+        if event is not None:
+            extra_context.update(event_nav(request, event))
+            extra_context[f"{self.nav_variant}_variant"] = "primary"
+            extra_context["show_event_nav"] = True
+        return super().changelist_view(request, extra_context)
+
+
 @admin.register(Event)
 class EventAdmin(ModelAdmin):
     list_display = ["name", "start_date", "end_date", "country", "city", "participant_count",
-                    "meeting_count"]
+                    "registered_count", "meeting_count"]
     list_filter = [("country", RelatedDropdownFilter), "start_date"]
     search_fields = ["name", "city"]
     autocomplete_fields = ["country"]
     date_hierarchy = "start_date"
     inlines = [EventParticipationInline, EventMeetingInline]
-    actions_detail = ["invitations", "matches", "schedule"]
+    actions_detail = ["invitations", "meetings", "matches", "schedule"]
+    actions_row = ["invitations"]
     readonly_fields = ["registration_link"]
     formfield_overrides = {
         models.TimeField: {"widget": UnfoldAdminSingleTimeWidget(format="%H:%M")},
@@ -512,6 +560,48 @@ class EventAdmin(ModelAdmin):
                                             ("meeting_minutes", "tables")]}),
         (_("Registration form"), {"fields": ["registration_open", "registration_link"]}),
     ]
+
+    def get_fieldsets(self, request, obj=None):
+        fieldsets = super().get_fieldsets(request, obj)
+        if obj is None:
+            return fieldsets
+        return [(_("Overview"), {"fields": ["overview"]}), *fieldsets]
+
+    def get_readonly_fields(self, request, obj=None):
+        return [*super().get_readonly_fields(request, obj), "overview"]
+
+    @display(description=_("participants"))
+    def overview(self, obj):
+        """Counts of the event's invitations, each linking to the filtered list."""
+        status, roles = Participation.Status, Participation.Role
+        taking_part = Q(status__in=[status.REGISTERED, status.CONFIRMED, status.ATTENDED])
+        counts = obj.participations.aggregate(
+            invited=Count("id"),
+            registered=Count("id", filter=Q(registered_at__isnull=False)),
+            to_confirm=Count("id", filter=Q(status=status.REGISTERED)),
+            confirmed=Count("id", filter=Q(status__in=[status.CONFIRMED, status.ATTENDED])),
+            buyers=Count("id", filter=taking_part & Q(role__in=[roles.BUYER, roles.BOTH])),
+            sellers=Count("id", filter=taking_part & Q(role__in=[roles.SELLER, roles.BOTH])),
+            awaiting=Count("id", filter=Q(status=status.INVITED)),
+        )
+        people = Attendee.objects.filter(participation__event=obj).filter(
+            participation__status__in=[status.REGISTERED, status.CONFIRMED, status.ATTENDED]).count()
+        items = [
+            (_("Invited companies"), counts["invited"], ""),
+            (_("Awaiting reply"), counts["awaiting"], f"&status__exact={status.INVITED}"),
+            (_("Registered"), counts["registered"], "&registered=yes"),
+            (_("To confirm"), counts["to_confirm"], f"&status__exact={status.REGISTERED}"),
+            (_("Confirmed"), counts["confirmed"], f"&status__exact={status.CONFIRMED}"),
+            (_("Buyers"), counts["buyers"], f"&role__exact={roles.BUYER}"),
+            (_("Sellers"), counts["sellers"], f"&role__exact={roles.SELLER}"),
+            (_("People"), people, None),
+        ]
+        base = reverse("admin:directory_participation_changelist") + f"?event__id__exact={obj.pk}"
+        return format_html('<div class="ctb-overview">{}</div>', format_html_join("", (
+            '<a class="ctb-stat" href="{}"><span class="ctb-stat-value">{}</span>'
+            '<span class="ctb-stat-label">{}</span></a>'), [
+            (base + query if query is not None else "#tab-participations", value, label)
+            for label, value, query in items]))
 
     @display(description=_("general registration link"))
     def registration_link(self, obj):
@@ -528,13 +618,25 @@ class EventAdmin(ModelAdmin):
             .select_related("country")
             .annotate(
                 _participant_count=Count("participations", distinct=True),
+                _registered_count=Count("participations", distinct=True,
+                                        filter=Q(participations__registered_at__isnull=False)),
                 _meeting_count=Count("meetings", distinct=True),
             )
         )
 
-    @display(description=_("participants"), ordering="_participant_count")
+    def _invitations_link(self, obj, count, query=""):
+        url = (reverse("admin:directory_participation_changelist")
+               + f"?event__id__exact={obj.pk}{query}")
+        return format_html('<a class="text-primary-600 dark:text-primary-500" href="{}">{}</a>',
+                           url, count)
+
+    @display(description=_("invited"), ordering="_participant_count")
     def participant_count(self, obj):
-        return obj._participant_count
+        return self._invitations_link(obj, obj._participant_count)
+
+    @display(description=_("registered companies"), ordering="_registered_count")
+    def registered_count(self, obj):
+        return self._invitations_link(obj, obj._registered_count, "&registered=yes")
 
     @display(description=_("meetings"), ordering="_meeting_count")
     def meeting_count(self, obj):
@@ -545,19 +647,19 @@ class EventAdmin(ModelAdmin):
             **self.admin_site.each_context(request),
             "opts": self.model._meta,
             "original": event,
-            "event": event,
             "title": title,
-            "change_url": reverse("admin:directory_event_change", args=[event.pk]),
-            "matches_url": reverse("admin:directory_event_matches", args=[event.pk]),
-            "schedule_url": reverse("admin:directory_event_schedule", args=[event.pk]),
-            "invitations_url": reverse("admin:directory_participation_changelist")
-            + f"?event__id__exact={event.pk}",
-            "can_change": self.has_change_permission(request, event),
+            **event_nav(request, event),
         }
 
-    @action(description=_("Invitations"), url_path="invitations", icon="forward_to_inbox")
+    @action(description=_("Invitations"), url_path="invitations", icon="forward_to_inbox",
+            extra_options={"display_in_dropdown": False})
     def invitations(self, request, object_id):
         return redirect(reverse("admin:directory_participation_changelist")
+                        + f"?event__id__exact={int(object_id)}")
+
+    @action(description=_("Meetings"), url_path="meetings", icon="handshake")
+    def meetings(self, request, object_id):
+        return redirect(reverse("admin:directory_meeting_changelist")
                         + f"?event__id__exact={int(object_id)}")
 
     @action(description=_("Suggest matches"), url_path="matches", icon="join_inner",
@@ -643,6 +745,21 @@ class FollowUpFilter(admin.SimpleListFilter):
         return queryset
 
 
+class RegisteredFilter(admin.SimpleListFilter):
+    title = _("registration form")
+    parameter_name = "registered"
+
+    def lookups(self, request, model_admin):
+        return [("yes", _("Registered through the form")), ("no", _("Not registered"))]
+
+    def queryset(self, request, queryset):
+        if self.value() == "yes":
+            return queryset.filter(registered_at__isnull=False)
+        if self.value() == "no":
+            return queryset.filter(registered_at__isnull=True)
+        return queryset
+
+
 class ContactedFilter(admin.SimpleListFilter):
     title = _("contact so far")
     parameter_name = "contacted"
@@ -699,13 +816,15 @@ def _last_activity(kind, field):
 
 
 @admin.register(Participation)
-class ParticipationAdmin(ModelAdmin):
-    list_display = ["company_header", "event", "status_label", "email_info", "call_info",
-                    "follow_up"]
+class ParticipationAdmin(EventNavMixin, ModelAdmin):
+    nav_variant = "invitations"
+    list_display = ["company_header", "event", "status_label", "registration_info", "email_info",
+                    "call_info", "follow_up"]
     list_display_links = ["company_header"]
     list_filter = [
         ("event", RelatedDropdownFilter),
         ("status", ChoicesDropdownFilter),
+        RegisteredFilter,
         FollowUpFilter,
         ContactedFilter,
         ("role", ChoicesDropdownFilter),
@@ -719,7 +838,7 @@ class ParticipationAdmin(ModelAdmin):
     list_select_related = ["company__country", "event"]
     actions = ["send_invitations", "log_invitation_emails", "mark_confirmed", "mark_declined",
                "mark_attended"]
-    actions_row = ["row_email", "row_call", "row_note"]
+    actions_row = ["row_confirm", "row_email", "row_call", "row_note"]
     inlines = [AttendeeInline, ActivityInline]
     readonly_fields = ["registered_at", "registration_link"]
     fields = [("event", "company"), ("status", "next_action_on"), ("role", "max_meetings"),
@@ -737,6 +856,7 @@ class ParticipationAdmin(ModelAdmin):
                 _calls=Count("activities", filter=Q(activities__kind=kinds.CALL), distinct=True),
                 _last_call=Max("activities__happened_at", filter=Q(activities__kind=kinds.CALL)),
                 _last_call_comment=_last_activity(kinds.CALL, "comment"),
+                _attendees=Count("attendees", distinct=True),
             )
         )
 
@@ -770,6 +890,15 @@ class ParticipationAdmin(ModelAdmin):
     @display(description=_("status"), label=PARTICIPATION_STATUS_LABELS, ordering="status")
     def status_label(self, obj):
         return obj.status, obj.get_status_display()
+
+    @display(description=_("registration"), ordering="registered_at")
+    def registration_info(self, obj):
+        if not obj.registered_at:
+            return "—"
+        people = ngettext("%(n)d person", "%(n)d people", obj._attendees) % {"n": obj._attendees}
+        return format_html(
+            '<div style="min-width:7rem">{}<br><span class="text-subtle text-xs">{}</span></div>',
+            timezone.localtime(obj.registered_at).strftime("%d.%m.%Y"), people)
 
     @display(description=_("e-mails sent"), ordering="_last_email")
     def email_info(self, obj):
@@ -852,6 +981,23 @@ class ParticipationAdmin(ModelAdmin):
     def row_note(self, request, object_id):
         return self._log_view(request, object_id, Activity.Kind.NOTE)
 
+    @action(description=_("Confirm"), url_path="confirm", icon="check_circle",
+            permissions=["change"], extra_options={"display_in_dropdown": False})
+    def row_confirm(self, request, object_id):
+        """One click after a registration: set the status to confirmed."""
+        participation = get_object_or_404(Participation.objects.select_related("company"),
+                                          pk=object_id)
+        if participation.status != Participation.Status.CONFIRMED:
+            log_activity(participation, Activity.Kind.NOTE, request.user,
+                         comment=_("Participation confirmed."),
+                         status=Participation.Status.CONFIRMED)
+            messages.success(request, _("%(company)s: participation confirmed.")
+                             % {"company": participation.company})
+        back = request.META.get("HTTP_REFERER") or reverse("admin:directory_participation_changelist")
+        if not url_has_allowed_host_and_scheme(back, {request.get_host()}):
+            back = reverse("admin:directory_participation_changelist")
+        return redirect(back)
+
     # bulk actions -----------------------------------------------------------------------
 
     @admin.action(description=_("Send invitation e-mail from the site…"), permissions=["change"])
@@ -929,7 +1075,8 @@ class ParticipationAdmin(ModelAdmin):
 
 
 @admin.register(Meeting)
-class MeetingAdmin(ModelAdmin):
+class MeetingAdmin(EventNavMixin, ModelAdmin):
+    nav_variant = "meetings"
     list_display = ["__str__", "event", "scheduled_at", "table", "status_label"]
     list_filter = [("status", ChoicesDropdownFilter), ("event", RelatedDropdownFilter)]
     list_filter_submit = True

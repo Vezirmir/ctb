@@ -1,3 +1,5 @@
+import logging
+
 from django.conf import settings
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import translation
@@ -5,6 +7,8 @@ from django.views.decorators.cache import never_cache
 
 from .models import Event, Participation
 from .registration import AttendeeFormSet, RegistrationForm, initial_data, register
+
+logger = logging.getLogger("directory.registration")
 
 
 def csrf_failure(request, reason=""):
@@ -38,8 +42,18 @@ def registration(request, event_key, token=None):
             form = RegistrationForm(request.POST)
             formset = AttendeeFormSet(request.POST, prefix="people")
             if form.is_valid() and formset.is_valid():
-                register(event, form.cleaned_data, formset.people, participation)
+                result = register(event, form.cleaned_data, formset.people, participation)
+                logger.info(
+                    "Registration saved: event %s, invitation %s, company %s (%s)", event.pk,
+                    result.participation.pk, result.participation.company_id,
+                    "new" if result.company_created else f"found by {result.matched_by}")
                 return redirect(f"{request.path}?done=1")
+            # Field names only, no personal data: shows in the server error log.
+            logger.warning("Registration form rejected: event %s, fields %s", event.pk,
+                           sorted(form.errors) + [f"participant-{i + 1}.{name}"
+                                                  for i, errors in enumerate(formset.errors)
+                                                  for name in errors]
+                           + (["participants"] if formset.non_form_errors() else []))
         else:
             form = RegistrationForm(initial=initial)
             formset = AttendeeFormSet(initial=people, prefix="people")

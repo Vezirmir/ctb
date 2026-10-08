@@ -940,7 +940,7 @@ class RegistrationTests(TestCase):
             "website": "https://brand-new.de", "phone": "+49 221 000", "address": "",
             "industries": [self.auto.pk], "description": "Car parts",
             "role": "buyer", "wanted_industries": [self.auto.pk], "wanted_countries": [self.tr.pk],
-            "interests": "Brake pads", "max_meetings": "8", "consent": "on", "homepage": "",
+            "interests": "Brake pads", "max_meetings": "8", "consent": "on", "ctb_trap": "",
             "people-TOTAL_FORMS": "2", "people-INITIAL_FORMS": "0",
             "people-MIN_NUM_FORMS": "1", "people-MAX_NUM_FORMS": "10",
             "people-0-full_name": "Hans Müller", "people-0-position": "Purchasing",
@@ -1028,7 +1028,7 @@ class RegistrationTests(TestCase):
         self.assertContains(response, "Please correct the fields marked in red.")
         response = self.client.post(url, self.data(**{"people-1-email": "hans@brand-new.de"}))
         self.assertContains(response, "already given for another participant")
-        self.client.post(url, self.data(homepage="http://spam"))
+        self.client.post(url, self.data(ctb_trap="http://spam"))
         self.assertFalse(Company.objects.filter(name="Brand New GmbH").exists())
         # A removed participant row is ignored even if it is incomplete.
         self.client.post(url, self.data(**{"people-1-DELETE": "on", "people-1-email": ""}))
@@ -1107,3 +1107,110 @@ class UpcomingEventsDashboardTests(TestCase):
         listed = self.client.get(reverse("admin:directory_participation_changelist")
                                  + f"?event__id__exact={soon.pk}&role__exact=seller")
         self.assertEqual(listed.context["cl"].result_count, 2)
+
+
+class RegistrationFollowUpTests(TestCase):
+    """A registered company is visible in the invitations list and can be confirmed in one click."""
+
+    def setUp(self):
+        from .models import Event
+        translation.activate("en")
+        self.event = Event.objects.create(name="No Date Expo")
+        self.admin = get_user_model().objects.create_superuser("admin", "a@x.com", "pw")
+
+    def register(self):
+        response = self.client.post(self.event.registration_path(), {
+            "company_name": "Flow Test Company", "consent": "on", "ctb_trap": "",
+            "people-TOTAL_FORMS": "2", "people-INITIAL_FORMS": "1",
+            "people-MIN_NUM_FORMS": "1", "people-MAX_NUM_FORMS": "10",
+            "people-0-full_name": "Ali Veli", "people-0-email": "ali@flowtest-example.com",
+            "people-1-full_name": "Ayşe Kaya", "people-1-email": "ayse@flowtest-example.com",
+        })
+        self.assertEqual(response.status_code, 302)
+        return Participation.objects.get(company__name="Flow Test Company")
+
+    def test_registered_company_in_invitations_and_confirm(self):
+        with self.assertLogs("directory.registration", "INFO") as logs:
+            p = self.register()
+        self.assertIn("Registration saved", logs.output[0])
+        self.client.force_login(self.admin)
+        changelist = reverse("admin:directory_participation_changelist")
+        page = self.client.get(changelist)
+        self.assertContains(page, "Flow Test Company")
+        self.assertContains(page, "2 people")
+        self.assertContains(page, "Registered")
+        only_registered = self.client.get(changelist + "?registered=yes")
+        self.assertEqual(only_registered.context["cl"].result_count, 1)
+        self.assertEqual(self.client.get(changelist + "?registered=no").context["cl"].result_count, 0)
+        response = self.client.get(reverse("admin:directory_participation_row_confirm", args=[p.pk]),
+                                   HTTP_REFERER=changelist)
+        self.assertRedirects(response, changelist)
+        p.refresh_from_db()
+        self.assertEqual(p.status, "confirmed")
+        self.assertEqual(p.activities.first().comment, "Participation confirmed.")
+        # Still visible as registered after the status changed.
+        self.assertEqual(self.client.get(changelist + "?registered=yes").context["cl"].result_count, 1)
+
+    def test_rejected_form_is_logged_and_explained(self):
+        with self.assertLogs("directory.registration", "WARNING") as logs:
+            response = self.client.post(self.event.registration_path(), {
+                "company_name": "X", "ctb_trap": "",
+                "people-TOTAL_FORMS": "1", "people-INITIAL_FORMS": "1",
+                "people-MIN_NUM_FORMS": "1", "people-MAX_NUM_FORMS": "10",
+                "people-0-full_name": "Ali", "people-0-email": "",
+            })
+        self.assertIn("consent", logs.output[0])
+        self.assertIn("participant-1.email", logs.output[0])
+        self.assertNotIn("Ali", logs.output[0])
+        self.assertContains(response, "Participant 1 · E-mail")
+
+    def test_event_without_date_on_dashboard(self):
+        self.register()
+        self.client.force_login(self.admin)
+        page = self.client.get(reverse("admin:index"))
+        self.assertContains(page, "No Date Expo")
+        self.assertContains(page, "date not set")
+        self.assertContains(page, "Flow Test Company")  # latest registrations
+
+
+class EventCentredNavigationTests(TestCase):
+    """The menu holds only general sections; invitations and meetings are opened from the event."""
+
+    def setUp(self):
+        from .models import Event
+        translation.activate("en")
+        self.event = Event.objects.create(name="Expo")
+        company = Company.objects.create(name="ACME")
+        self.p = Participation.objects.create(event=self.event, company=company, role="buyer",
+                                              status="registered", registered_at=timezone.now())
+        self.p.attendees.create(full_name="Ali Veli")
+        self.client.force_login(get_user_model().objects.create_superuser("admin", "a@x.com", "pw"))
+
+    def test_menu_has_no_event_specific_sections(self):
+        page = self.client.get(reverse("admin:index")).content.decode()
+        sidebar = page[page.find('id="nav-sidebar'):]
+        changelist = reverse("admin:directory_participation_changelist")
+        self.assertNotIn(f'href="{changelist}"', sidebar)
+        self.assertNotIn(f'href="{changelist}?status__exact=registered"', sidebar)
+        self.assertNotIn(f'href="{reverse("admin:directory_meeting_changelist")}"', sidebar)
+        self.assertIn(f'href="{reverse("admin:directory_event_changelist")}"', sidebar)
+
+    def test_event_page_shows_overview_and_invitations(self):
+        page = self.client.get(reverse("admin:directory_event_change", args=[self.event.pk]))
+        self.assertContains(page, "Overview")
+        self.assertContains(page, "To confirm")
+        self.assertContains(page, f"?event__id__exact={self.event.pk}&amp;registered=yes")
+        self.assertContains(page, reverse("admin:directory_event_meetings", args=[self.event.pk]))
+        self.assertContains(page, "1 person")  # registration column in the Invitations tab
+        events = self.client.get(reverse("admin:directory_event_changelist"))
+        self.assertContains(events, reverse("admin:directory_event_invitations", args=[self.event.pk]))
+
+    def test_event_lists_show_event_buttons(self):
+        for name in ("participation", "meeting"):
+            listed = self.client.get(reverse(f"admin:directory_{name}_changelist")
+                                     + f"?event__id__exact={self.event.pk}")
+            self.assertContains(listed, reverse("admin:directory_event_schedule", args=[self.event.pk]))
+        unfiltered = self.client.get(reverse("admin:directory_participation_changelist"))
+        self.assertNotContains(unfiltered, reverse("admin:directory_event_schedule", args=[self.event.pk]))
+        self.assertContains(self.client.get(reverse("admin:directory_event_meetings", args=[self.event.pk]),
+                                            follow=True), "Expo")

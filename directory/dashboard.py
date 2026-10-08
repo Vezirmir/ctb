@@ -1,4 +1,4 @@
-from django.db.models import Count, Q
+from django.db.models import Count, F, Q
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.html import format_html
@@ -27,11 +27,6 @@ def follow_up_badge(request):
     return _follow_ups_due().count() or ""
 
 
-def registration_badge(request):
-    """Companies that registered through the form and are not confirmed yet."""
-    return Participation.objects.filter(status=Participation.Status.REGISTERED).count() or ""
-
-
 # Companies that take part: registered through the form, confirmed or already attended.
 TAKING_PART = [Participation.Status.REGISTERED, Participation.Status.CONFIRMED,
                Participation.Status.ATTENDED]
@@ -50,8 +45,9 @@ def upcoming_events():
     taking_part = Q(participations__status__in=TAKING_PART)
     roles = Participation.Role
     events = (
-        Event.objects.filter(start_date__isnull=False)
-        .filter(Q(start_date__gte=today) | Q(end_date__gte=today))
+        # Events without a date yet are planned too; they come after the dated ones.
+        Event.objects.filter(Q(start_date__isnull=True) | Q(start_date__gte=today)
+                             | Q(end_date__gte=today))
         .select_related("country")
         .annotate(
             companies=Count("participations", filter=taking_part, distinct=True),
@@ -63,20 +59,24 @@ def upcoming_events():
             awaiting=Count("participations", distinct=True,
                            filter=Q(participations__status=Participation.Status.INVITED)),
         )
-        .order_by("start_date", "name")[:UPCOMING_EVENTS]
+        .order_by(F("start_date").asc(nulls_last=True), "name")[:UPCOMING_EVENTS]
     )
     invitations = reverse("admin:directory_participation_changelist")
     rows = []
     for e in events:
         listed = f"{invitations}?event__id__exact={e.pk}"
         place = ", ".join(str(v) for v in (e.city, e.country) if v)
-        days = (e.start_date - today).days
-        when = (_("today") if days == 0 else _("in %(n)d days") % {"n": days} if days > 0
-                else _("now"))
+        if e.start_date:
+            days = (e.start_date - today).days
+            dates = _event_dates(e)
+            when = (_("today") if days == 0 else _("in %(n)d days") % {"n": days} if days > 0
+                    else _("now"))
+        else:
+            dates, when = "—", _("date not set")
         rows.append([
             format_html('{}<div class="text-subtle text-xs">{}</div>',
                         _link(reverse("admin:directory_event_change", args=[e.pk]), e.name), place),
-            format_html('{}<div class="text-subtle text-xs">{}</div>', _event_dates(e), when),
+            format_html('{}<div class="text-subtle text-xs">{}</div>', dates, when),
             _link(listed, e.companies),
             _link(f"{listed}&role__exact={roles.BUYER}", e.buyers),
             _link(f"{listed}&role__exact={roles.SELLER}", e.sellers),

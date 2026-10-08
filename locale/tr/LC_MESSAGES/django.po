@@ -903,7 +903,7 @@ msgid "Invited"
 msgstr "Davet edildi"
 
 msgid "Confirmed"
-msgstr "Onayladı"
+msgstr "Onaylandı"
 
 msgid "Declined"
 msgstr "Reddetti"
@@ -1770,3 +1770,49 @@ msgstr "Yaklaşan etkinlik yok."
 
 msgid "Add an event"
 msgstr "Etkinlik ekle"
+
+msgid "registration"
+msgstr "kayıt"
+
+msgid "Overview"
+msgstr "Özet"
+
+msgid "Invited companies"
+msgstr "Davet edilen firmalar"
+
+msgid "To confirm"
+msgstr "Onay bekleyen"
+
+msgid "invited"
+msgstr "davet edilen"
+
+msgid "registration form"
+msgstr "kayıt formu"
+
+msgid "Registered through the form"
+msgstr "Formla kayıt olanlar"
+
+msgid "Not registered"
+msgstr "Kayıt olmayanlar"
+
+msgid "Confirm"
+msgstr "Onayla"
+
+msgid "Participation confirmed."
+msgstr "Katılım onaylandı."
+
+#, python-format
+msgid "%(company)s: participation confirmed."
+msgstr "%(company)s: katılım onaylandı."
+
+msgid "date not set"
+msgstr "tarih belirlenmedi"
+
+#, python-format
+msgid "%(n)d person"
+msgid_plural "%(n)d people"
+msgstr[0] "%(n)d kişi"
+msgstr[1] "%(n)d kişi"
+
+msgid "registered companies"
+msgstr "kayıt olan"

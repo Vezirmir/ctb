@@ -6,7 +6,6 @@ from pathlib import Path
 import dj_database_url
 from django.templatetags.static import static
 from django.urls import reverse_lazy
-from django.utils.text import format_lazy
 from django.utils.translation import gettext_lazy as _
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -117,6 +116,8 @@ LOGGING = {
     "disable_existing_loggers": False,
     "handlers": {"console": {"class": "logging.StreamHandler"}},
     "root": {"handlers": ["console"], "level": "WARNING"},
+    # Registration form submissions (saved or rejected), without personal data.
+    "loggers": {"directory": {"level": "INFO"}},
 }
 
 
@@ -250,19 +251,14 @@ UNFOLD = {
             {
                 "title": _("Events"),
                 "items": [
-                    {"title": _("Events"), "icon": "event", "link": _changelist("event")},
-                    {"title": _("Invitations"), "icon": "forward_to_inbox",
-                     "link": _changelist("participation"),
+                    # Everything that belongs to one event (invitations, registrations,
+                    # meetings, schedule) is opened from the event itself.
+                    {"title": _("Events"), "icon": "event", "link": _changelist("event"),
                      "badge": "directory.dashboard.follow_up_badge", "badge_variant": "danger"},
-                    {"title": _("Registrations"), "icon": "how_to_reg",
-                     "link": format_lazy("{}?status__exact=registered",
-                                         _changelist("participation")),
-                     "badge": "directory.dashboard.registration_badge", "badge_variant": "primary"},
                     {"title": _("Invitation templates"), "icon": "drafts",
                      "link": _changelist("emailtemplate")},
                     {"title": _("My signature"), "icon": "signature",
                      "link": reverse_lazy("admin:directory_signature")},
-                    {"title": _("Meetings"), "icon": "handshake", "link": _changelist("meeting")},
                 ],
             },
             {

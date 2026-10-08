@@ -1066,3 +1066,44 @@ class RegistrationTests(TestCase):
         dashboard = self.client.get(reverse("admin:index"))
         self.assertContains(dashboard, "Latest registrations")
         self.assertContains(dashboard, "Brand New GmbH")
+
+
+class UpcomingEventsDashboardTests(TestCase):
+    def test_upcoming_events_with_participant_counts(self):
+        from datetime import timedelta
+        from .models import Attendee, Event
+        translation.activate("en")
+        today = timezone.localdate()
+        soon = Event.objects.create(name="Soon Expo", start_date=today + timedelta(days=10),
+                                    city="Bursa")
+        Event.objects.create(name="Past Expo", start_date=today - timedelta(days=30))
+        Event.objects.create(name="Later Expo", start_date=today + timedelta(days=40))
+        statuses = [("buyer", "confirmed"), ("buyer", "registered"), ("seller", "confirmed"),
+                    ("both", "attended"), ("seller", "invited"), ("buyer", "declined"),
+                    ("", "confirmed")]
+        for i, (role, status) in enumerate(statuses):
+            company = Company.objects.create(name=f"C{i}")
+            p = Participation.objects.create(event=soon, company=company, role=role, status=status)
+            Attendee.objects.create(participation=p, full_name=f"Person {i}")
+        Attendee.objects.create(participation=p, full_name="Second person")
+
+        from .dashboard import upcoming_events
+        table = upcoming_events()
+        self.assertEqual(len(table["rows"]), 2)
+        first = [str(cell) for cell in table["rows"][0]]
+        self.assertIn("Soon Expo", first[0])
+        self.assertIn("in 10 days", first[1])
+        # taking part: 5 companies; buyers 2 + both; sellers 1 + both; people of those 5; 1 invited
+        self.assertEqual([c.rsplit(">", 2)[-2].split("<")[0] if "<a" in c else c for c in first[2:]],
+                         ["5", "3", "2", "6", "1"])
+
+        admin_user = get_user_model().objects.create_superuser("admin", "a@x.com", "pw")
+        self.client.force_login(admin_user)
+        page = self.client.get(reverse("admin:index"))
+        self.assertContains(page, "Upcoming events")
+        self.assertContains(page, "Soon Expo")
+        self.assertNotContains(page, "Past Expo")
+        self.assertContains(page, f"event__id__exact={soon.pk}&amp;role__exact=buyer")
+        listed = self.client.get(reverse("admin:directory_participation_changelist")
+                                 + f"?event__id__exact={soon.pk}&role__exact=seller")
+        self.assertEqual(listed.context["cl"].result_count, 2)

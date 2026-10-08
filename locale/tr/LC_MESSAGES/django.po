@@ -1727,3 +1727,46 @@ msgstr ""
 
 msgid "Latest registrations"
 msgstr "Son kayıtlar"
+
+msgid "today"
+msgstr "bugün"
+
+#, python-format
+msgid "in %(n)d days"
+msgstr "%(n)d gün sonra"
+
+msgid "now"
+msgstr "devam ediyor"
+
+msgid "Dates"
+msgstr "Tarihler"
+
+msgid "Buyers"
+msgstr "Alıcılar"
+
+msgid "Sellers"
+msgstr "Satıcılar"
+
+msgid "People"
+msgstr "Kişiler"
+
+msgid "Awaiting reply"
+msgstr "Yanıt bekleniyor"
+
+msgid "Upcoming events"
+msgstr "Yaklaşan etkinlikler"
+
+msgid ""
+"Participants: companies that registered, confirmed or attended. A company "
+"with the role “buyer and seller” is counted in both columns. People: "
+"participants from the registration forms."
+msgstr ""
+"Katılımcılar: kayıt olan, onaylanan veya katılan firmalar. “Alıcı ve satıcı”"
+" rolündeki firma iki sütunda da sayılır. Kişiler: kayıt formlarındaki "
+"katılımcılar."
+
+msgid "No upcoming events."
+msgstr "Yaklaşan etkinlik yok."
+
+msgid "Add an event"
+msgstr "Etkinlik ekle"

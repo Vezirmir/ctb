@@ -33,6 +33,17 @@
         {% endfor %}
     </div>
 
+    {% component "unfold/components/card.html" with title=_("Upcoming events") title_icon="event" %}
+        {% if upcoming_events.rows %}
+            {% component "unfold/components/table.html" with table=upcoming_events card_included=1 striped=1 %}{% endcomponent %}
+            <p class="text-subtle text-xs" style="margin-top:40px">{% translate "Participants: companies that registered, confirmed or attended. A company with the role “buyer and seller” is counted in both columns. People: participants from the registration forms." %}</p>
+        {% else %}
+            <p class="text-subtle">{% translate "No upcoming events." %}
+                {% if can_add_event %}<a class="text-primary-600 dark:text-primary-500" href="{% url 'admin:directory_event_add' %}">{% translate "Add an event" %}</a>{% endif %}
+            </p>
+        {% endif %}
+    {% endcomponent %}
+
     {% if follow_ups.rows %}
         {% component "unfold/components/card.html" with title=_("To contact today") title_icon="notifications_active" %}
             {% component "unfold/components/table.html" with table=follow_ups card_included=1 striped=1 %}{% endcomponent %}

@@ -5,7 +5,7 @@ from django.utils.html import format_html
 from django.utils.text import capfirst
 from django.utils.translation import gettext as _
 
-from .models import Company, Contact, Country, Email, Industry, Participation
+from .models import Company, Contact, Country, Email, Event, Industry, Participation
 
 
 def _link(url, text):
@@ -30,6 +30,64 @@ def follow_up_badge(request):
 def registration_badge(request):
     """Companies that registered through the form and are not confirmed yet."""
     return Participation.objects.filter(status=Participation.Status.REGISTERED).count() or ""
+
+
+# Companies that take part: registered through the form, confirmed or already attended.
+TAKING_PART = [Participation.Status.REGISTERED, Participation.Status.CONFIRMED,
+               Participation.Status.ATTENDED]
+UPCOMING_EVENTS = 6
+
+
+def _event_dates(event):
+    if event.end_date and event.end_date != event.start_date:
+        return f"{event.start_date:%d.%m} – {event.end_date:%d.%m.%Y}"
+    return f"{event.start_date:%d.%m.%Y}"
+
+
+def upcoming_events():
+    """Next events with participant counts: companies taking part, buyers, sellers, people."""
+    today = timezone.localdate()
+    taking_part = Q(participations__status__in=TAKING_PART)
+    roles = Participation.Role
+    events = (
+        Event.objects.filter(start_date__isnull=False)
+        .filter(Q(start_date__gte=today) | Q(end_date__gte=today))
+        .select_related("country")
+        .annotate(
+            companies=Count("participations", filter=taking_part, distinct=True),
+            buyers=Count("participations", distinct=True, filter=taking_part & Q(
+                participations__role__in=[roles.BUYER, roles.BOTH])),
+            sellers=Count("participations", distinct=True, filter=taking_part & Q(
+                participations__role__in=[roles.SELLER, roles.BOTH])),
+            people=Count("participations__attendees", filter=taking_part, distinct=True),
+            awaiting=Count("participations", distinct=True,
+                           filter=Q(participations__status=Participation.Status.INVITED)),
+        )
+        .order_by("start_date", "name")[:UPCOMING_EVENTS]
+    )
+    invitations = reverse("admin:directory_participation_changelist")
+    rows = []
+    for e in events:
+        listed = f"{invitations}?event__id__exact={e.pk}"
+        place = ", ".join(str(v) for v in (e.city, e.country) if v)
+        days = (e.start_date - today).days
+        when = (_("today") if days == 0 else _("in %(n)d days") % {"n": days} if days > 0
+                else _("now"))
+        rows.append([
+            format_html('{}<div class="text-subtle text-xs">{}</div>',
+                        _link(reverse("admin:directory_event_change", args=[e.pk]), e.name), place),
+            format_html('{}<div class="text-subtle text-xs">{}</div>', _event_dates(e), when),
+            _link(listed, e.companies),
+            _link(f"{listed}&role__exact={roles.BUYER}", e.buyers),
+            _link(f"{listed}&role__exact={roles.SELLER}", e.sellers),
+            e.people,
+            _link(f"{listed}&status__exact={Participation.Status.INVITED}", e.awaiting),
+        ])
+    return {
+        "headers": [_("Event"), _("Dates"), _("Participants"), _("Buyers"), _("Sellers"),
+                    _("People"), _("Awaiting reply")],
+        "rows": rows,
+    }
 
 
 def _breakdown(model, lookup):
@@ -114,6 +172,8 @@ def dashboard_callback(request, context):
         ],
     }
     context["follow_ups_url"] = f"{participations}?follow_up=overdue"
+    context["upcoming_events"] = upcoming_events()
+    context["can_add_event"] = request.user.has_perm("directory.add_event")
     context["registrations"] = {
         "headers": [_("Company"), _("Event"), _("Participants"), _("Registered")],
         "rows": [
